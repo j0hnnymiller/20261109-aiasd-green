@@ -21,6 +21,10 @@ revisions:
     date: "2026-11-13"
     change: "Recorded Copilot's S01 implementation authorization through GitHub issue #2 and separated pending review and pilot gates from authorization."
     ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
+  - chat_id: "02051eeb-6a3e-4203-977d-fcff87be0ec9"
+    date: "2026-11-13"
+    change: "Linked the draft S02 create-and-view implementation specification without authorizing its implementation."
+    ai_log: "ai-logs/2026/11/13/02051eeb-6a3e-4203-977d-fcff87be0ec9/conversation.md"
 ---
 
 # Task Manager Vertical-Slice Implementation Roadmap
@@ -118,6 +122,8 @@ Solid arrows are blocking prerequisites; dotted arrows are coordination or condi
 **Sources:** PRS account-free access decision and TM-NFR-01; architecture Workspace access and First browser visit.
 
 ### S02: Create and View Tasks
+
+**Specification:** [S02 implementation specification](specs/task-manager/S02-create-and-view-tasks.spec.md) (Draft; separate implementation authorization required).
 
 **User outcome:** The user can save a task and see it again in the same task space.
 

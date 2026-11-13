@@ -47,6 +47,10 @@ revisions:
     date: "2026-11-13"
     change: "Linked the engineering instructions updated to address cross-tab provisioning, connection-pool compensation, and regression-test assertions."
     ai_log: "ai-logs/2026/11/13/02051eeb-6a3e-4203-977d-fcff87be0ec9/conversation.md"
+  - chat_id: "02051eeb-6a3e-4203-977d-fcff87be0ec9"
+    date: "2026-11-13"
+    change: "Linked the draft S02 create-and-view implementation specification."
+    ai_log: "ai-logs/2026/11/13/02051eeb-6a3e-4203-977d-fcff87be0ec9/conversation.md"
 ---
 
 # Task Manager
@@ -59,6 +63,7 @@ Welcome!
 - [Task Manager Architecture](task-manager-architecture.md) (approved by requester; implementation authorization is separate)
 - [Task Manager Vertical-Slice Implementation Roadmap](task-manager-implementation-roadmap.md) (draft plan; implementation authorization is separate)
 - [S01: Provision and Access a Browser Task Space](specs/task-manager/S01-provision-browser-task-space.spec.md) (approved by requester; Copilot implementation authorized through [issue #2](https://github.com/j0hnnymiller/20261109-aiasd-green/issues/2); independent technical/security review and pilot gates remain)
+- [S02: Create and View Tasks](specs/task-manager/S02-create-and-view-tasks.spec.md) (draft for review; implementation authorization is separate)
 
 ## Engineering Guidance
 
