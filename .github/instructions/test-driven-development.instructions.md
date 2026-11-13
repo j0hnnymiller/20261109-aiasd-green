@@ -20,6 +20,11 @@ total_duration: "00:15:00"
 ai_log: "ai-logs/2026/05/20/test-driven-development-20260520/conversation.md"
 source: "johnmillerATcodemag-com"
 applyTo: "**/*.{cs,ts,js,py,java,go,rb}"
+revisions:
+  - chat_id: "02051eeb-6a3e-4203-977d-fcff87be0ec9"
+    date: "2026-11-13"
+    change: "Added regression-test guidance for proving entity-local state changes and counting all usable credentials."
+    ai_log: "ai-logs/2026/11/13/02051eeb-6a3e-4203-977d-fcff87be0ec9/conversation.md"
 ---
 
 # Test-Driven Development Instructions
@@ -43,6 +48,7 @@ This document provides comprehensive guidance for implementing test-driven devel
 - [The Red-Green-Refactor Cycle](#the-red-green-refactor-cycle)
 - [Test Anatomy](#test-anatomy)
 - [Test Categories](#test-categories)
+- [State, Concurrency, and Cleanup Assertions](#state-concurrency-and-cleanup-assertions)
 - [Testing Patterns](#testing-patterns)
 - [Mocking and Test Doubles](#mocking-and-test-doubles)
 - [Test Naming Conventions](#test-naming-conventions)
@@ -344,6 +350,15 @@ def test_user_registration_workflow_end_to_end():
   /    Unit      \   (Many, fast, isolated)
  /________________\ ~60% of tests
 ```
+
+---
+
+## State, Concurrency, and Cleanup Assertions
+
+- For state-change tests, capture the target entity's value before the operation and compare its post-operation value to that baseline. Do not infer that a write succeeded by comparing it with another entity's value or by asserting only a success-shaped response.
+- When testing that a write affects only one entity, assert both that the target changed from its own baseline and that the other entity stayed unchanged. Prefer a deterministic clock or another controlled observable when timestamps may have coarse resolution.
+- For concurrent or reordered requests, control the interleaving (for example, delayed response delivery or a synchronization barrier) instead of relying on timing sleeps. Assert the resulting durable state and that credentials/resources expected to remain usable still work.
+- Cleanup and revocation assertions must count every unexpired, unrevoked credential that the authorization or confirmation flow still accepts, including unconfirmed credentials when the implementation permits their use. Derive test queries from the actual acceptance rules rather than from a display or activation status.
 
 ---
 

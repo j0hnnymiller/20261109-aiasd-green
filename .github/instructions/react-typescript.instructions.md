@@ -15,7 +15,7 @@ source: "user request"
 name: "react-typescript"
 description: "Use when building or changing the task-manager React and TypeScript interface, including accessibility, API state, and refresh behavior."
 applyTo: "**/*.{ts,tsx}"
-version: "1.1.0"
+version: "1.2.0"
 author: "jMM-at-CODETraining"
 tags: ["react", "typescript", "frontend", "task-manager"]
 owner: "Development Team"
@@ -26,6 +26,10 @@ revisions:
     date: "2026-11-13"
     change: "Aligned authentication feedback and verification with account-free single-browser/no-recovery and named-list deletion behavior."
     ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
+  - chat_id: "02051eeb-6a3e-4203-977d-fcff87be0ec9"
+    date: "2026-11-13"
+    change: "Added cross-tab first-use provisioning coordination, access rechecks, and delayed-response regression coverage."
+    ai_log: "ai-logs/2026/11/13/02051eeb-6a3e-4203-977d-fcff87be0ec9/conversation.md"
 ---
 
 # React and TypeScript Instructions
@@ -55,6 +59,7 @@ Apply these rules to the task-manager browser interface. The approved stack is R
 - Use the same-origin API where deployment supports it. Keep API calls behind a small typed boundary; do not couple components to raw transport details.
 - Fetch current data when the app opens, when the user returns to it, and on an explicit refresh. Do not add polling, push updates, hidden offline queues, or automatic task-content persistence.
 - Coalesce duplicate focus/visibility refresh triggers. Prevent older refresh or mutation responses from overwriting newer confirmed state.
+- Coordinate first-use provisioning across tabs that share the browser credential cookie. Share a non-secret pending attempt and hold a browser-wide lock through server confirmation and cookie processing; recheck access inside the lock before creating a workspace. Use a mechanism supported by the target browsers, and never persist or broadcast the credential itself.
 - Preserve drafts during refresh. On refresh failure, retain the previous view and show a clear stale/error state; never replace it with an empty list that implies success.
 - On save failure, preserve user input and explain the failure. Show “Saved” only after server confirmation; represent ambiguous outcomes as ambiguous, not as definite failure or success.
 - Handle validation, unauthenticated access, unavailable resources, version conflicts, rate limits, and service failures as distinct user-visible states. For an invalid browser credential, explain that the task space is inaccessible and that the MVP has no account, pairing, or recovery; do not silently create a new workspace.
@@ -71,6 +76,7 @@ Apply these rules to the task-manager browser interface. The approved stack is R
 
 - [ ] Type-check and run the repository's configured frontend checks once tooling is selected.
 - [ ] Verify keyboard and screen-reader access for task, list, and browser-credential error flows.
+- [ ] Verify two tabs cannot provision competing first-use workspaces or replace a confirmed credential when response delivery is delayed.
 - [ ] Verify refresh failure preserves the previous view and unsaved drafts.
 - [ ] Verify stale responses cannot overwrite newer edits and conflicts retain the user's draft.
 - [ ] Verify no polling, hidden offline writes, sensitive browser persistence, or unauthorized workspace access is introduced.
@@ -82,6 +88,6 @@ Apply these rules to the task-manager browser interface. The approved stack is R
 Keep the React/TypeScript client accessible and typed, with server-confirmed state, explicit refresh and error behavior, preserved drafts, and no client-side authority over workspace access.
 
 **Related Instructions**: [ASP.NET Core](aspnet-core.instructions.md), [PostgreSQL](postgresql.instructions.md)
-**Document Version**: 1.1.0
+**Document Version**: 1.2.0
 **Last Updated**: 2026-11-13
 **Maintainer**: Development Team
