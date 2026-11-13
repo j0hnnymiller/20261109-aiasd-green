@@ -18,6 +18,12 @@ total_duration: "00:45:00"
 ai_log: "ai-logs/2025/10/22/vertical-slice-instructions-20251022/conversation.md"
 source: "johnmillerATcodemag-com"
 applyTo: "**/*.{cs,ts,js,py,java,go,rb}"
+revisions:
+  - chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
+    model: "unknown/unknown@unknown"
+    date: "2026-11-13"
+    change: "Replaced prescriptive request-routing patterns with feature-operation inputs, direct feature calls, and framework-neutral cross-cutting guidance."
+    ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 ---
 
 # Vertical Slice Architecture Instructions
@@ -54,13 +60,13 @@ This document provides comprehensive guidance for implementing vertical slice ar
 ```
 /Features
   /UserRegistration
-    - RegisterUserCommand.cs
+    - RegisterUserRequest.cs
     - RegisterUserHandler.cs
     - RegisterUserValidator.cs
     - UserRegistrationRepository.cs
     - RegistrationDto.cs
   /ProductSearch
-    - SearchProductsQuery.cs
+    - SearchProductsRequest.cs
     - SearchProductsHandler.cs
     - ProductSearchResult.cs
 ```
@@ -150,9 +156,9 @@ This document provides comprehensive guidance for implementing vertical slice ar
 ```
 1. API Endpoint receives HTTP request
    ↓
-2. Request mapped to Command/Query object
+2. Endpoint validates and maps input to the feature's operation
    ↓
-3. Mediator/Router dispatches to Handler
+3. Endpoint or router invokes the feature operation
    ↓
 4. Handler executes feature logic
    ↓  (may access database, call external services, etc.)
@@ -169,7 +175,7 @@ Each feature slice should follow a consistent structure:
 
 ```
 /Features/[FeatureName]
-  - [Action]Command.cs        # Command/Query object (request)
+  - [Action]Request.cs        # Input model when useful
   - [Action]Handler.cs        # Business logic handler
   - [Action]Validator.cs      # Input validation
   - [Action]Result.cs         # Response DTO
@@ -183,7 +189,7 @@ Each feature slice should follow a consistent structure:
 
 ```
 /Features/UserRegistration
-  - RegisterUserCommand.cs
+  - RegisterUserRequest.cs
   - RegisterUserHandler.cs
   - RegisterUserValidator.cs
   - RegistrationResult.cs
@@ -192,50 +198,36 @@ Each feature slice should follow a consistent structure:
   - UserRegistrationExtensions.cs
 ```
 
-### 2. Command/Query Objects (Request Objects)
+### 2. Feature Operation Inputs
 
-**Pattern**: Use CQRS-style commands and queries as feature requests.
-
-**Command Example** (modifies state):
+Use focused input models when they clarify an operation boundary or are needed by the transport or validation framework. A dedicated request type is optional; simple operations may use method parameters.
 
 ```csharp
-public record RegisterUserCommand(
+public record RegisterUserRequest(
     string Email,
     string Password,
     string FirstName,
     string LastName
-) : IRequest<Result<RegistrationResult>>;
-```
-
-**Query Example** (reads state):
-
-```csharp
-public record GetUserProfileQuery(
-    Guid UserId
-) : IRequest<Result<UserProfileDto>>;
+);
 ```
 
 **Rules**:
 
 - Use immutable records or classes
 - Include all data required for the operation
-- Name clearly: `[Verb][Entity][Command|Query]`
-- No business logic in command/query objects
-- Validate in separate validator class
+- Name inputs clearly, for example `RegisterUserRequest` or `ProductSearchRequest`
+- Keep business logic out of input models
+- Validate at the operation boundary using the repository's existing validation pattern
 - Return `Result<T>` or similar wrapper for error handling
 
-**Naming Conventions**:
-
-- Commands: `CreateX`, `UpdateX`, `DeleteX`, `ProcessX`
-- Queries: `GetX`, `ListX`, `SearchX`, `FindX`
+Name operations by the user outcome, such as `RegisterUser`, `GetUserProfile`, `ListProducts`, or `DeleteProduct`. Keep read and write operations within the same feature boundary and add abstractions only for demonstrated needs.
 
 ### 3. Handler Implementation
 
-**Pattern**: One handler per command/query containing complete feature logic.
+**Pattern**: Keep each operation's orchestration and business behavior within its feature. A focused handler or service can implement the operation; add abstractions only when the application has a demonstrated need for them.
 
 ```csharp
 public class RegisterUserHandler
-    : IRequestHandler<RegisterUserCommand, Result<RegistrationResult>>
 {
     private readonly IDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
@@ -254,13 +246,13 @@ public class RegisterUserHandler
         _logger = logger;
     }
 
-    public async Task<Result<RegistrationResult>> Handle(
-        RegisterUserCommand command,
+    public async Task<Result<RegistrationResult>> HandleAsync(
+        RegisterUserRequest request,
         CancellationToken cancellationToken)
     {
         // 1. Check if user already exists
         var existingUser = await _dbContext.Users
-            .FirstOrDefaultAsync(u => u.Email == command.Email, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
 
         if (existingUser != null)
             return Result<RegistrationResult>.Failure("User already exists");
@@ -269,10 +261,10 @@ public class RegisterUserHandler
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = command.Email,
-            PasswordHash = _passwordHasher.Hash(command.Password),
-            FirstName = command.FirstName,
-            LastName = command.LastName,
+            Email = request.Email,
+            PasswordHash = _passwordHasher.Hash(request.Password),
+            FirstName = request.FirstName,
+            LastName = request.LastName,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -298,7 +290,7 @@ public class RegisterUserHandler
 
 **Handler Rules**:
 
-- One handler per command/query
+- Keep each handler focused on one user outcome
 - Contains complete feature logic
 - Orchestrates dependencies (repositories, services, etc.)
 - Returns strongly-typed results
@@ -314,7 +306,7 @@ public class RegisterUserHandler
 **Using FluentValidation** (recommended):
 
 ```csharp
-public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
+public class RegisterUserValidator : AbstractValidator<RegisterUserRequest>
 {
     public RegisterUserValidator()
     {
@@ -341,45 +333,7 @@ public class RegisterUserValidator : AbstractValidator<RegisterUserCommand>
 }
 ```
 
-**Validation Pipeline** (MediatR behavior):
-
-```csharp
-public class ValidationBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
-{
-    private readonly IEnumerable<IValidator<TRequest>> _validators;
-
-    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
-    {
-        _validators = validators;
-    }
-
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
-    {
-        if (!_validators.Any())
-            return await next();
-
-        var context = new ValidationContext<TRequest>(request);
-
-        var validationResults = await Task.WhenAll(
-            _validators.Select(v => v.ValidateAsync(context, cancellationToken)));
-
-        var failures = validationResults
-            .SelectMany(r => r.Errors)
-            .Where(f => f != null)
-            .ToList();
-
-        if (failures.Any())
-            throw new ValidationException(failures);
-
-        return await next();
-    }
-}
-```
+Run validation at the API or operation boundary using the framework's established mechanism. Keep validation errors explicit and testable.
 
 ### 5. Data Access
 
@@ -415,14 +369,14 @@ public class UserRegistrationRepository
 **Option 2: Direct DbContext Access** (simpler, less abstraction):
 
 ```csharp
-public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result>
+public class RegisterUserHandler
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public async Task<Result> Handle(RegisterUserCommand command, CancellationToken ct)
+    public async Task<Result> HandleAsync(RegisterUserRequest request, CancellationToken ct)
     {
         var user = await _dbContext.Users
-            .FirstOrDefaultAsync(u => u.Email == command.Email, ct);
+            .FirstOrDefaultAsync(u => u.Email == request.Email, ct);
 
         // ... rest of handler logic
     }
@@ -434,32 +388,32 @@ public class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result>
 - Use repositories when data access is complex or repeated
 - Use direct DbContext for simple CRUD operations
 - Keep repositories feature-specific (no generic repositories)
-- Consider read vs. write optimizations (CQRS)
+- Optimize reads or writes only when a measured need justifies it
 
 ### 6. API Endpoints
 
-**Pattern**: Thin controllers that delegate to handlers via mediator.
+**Pattern**: Keep controllers thin and delegate to the feature operation or handler.
 
 ```csharp
 [ApiController]
 [Route("api/users")]
 public class UserRegistrationController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly RegisterUserHandler _handler;
 
-    public UserRegistrationController(IMediator mediator)
+    public UserRegistrationController(RegisterUserHandler handler)
     {
-        _mediator = mediator;
+        _handler = handler;
     }
 
     [HttpPost("register")]
     [ProducesResponseType(typeof(RegistrationResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register(
-        [FromBody] RegisterUserCommand command,
+        [FromBody] RegisterUserRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(command, cancellationToken);
+        var result = await _handler.HandleAsync(request, cancellationToken);
 
         return result.IsSuccess
             ? Ok(result.Value)
@@ -472,11 +426,11 @@ public class UserRegistrationController : ControllerBase
 
 ```csharp
 app.MapPost("/api/users/register", async (
-    RegisterUserCommand command,
-    IMediator mediator,
+    RegisterUserRequest request,
+    RegisterUserHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var result = await mediator.Send(command, cancellationToken);
+    var result = await handler.HandleAsync(request, cancellationToken);
     return result.IsSuccess
         ? Results.Ok(result.Value)
         : Results.BadRequest(result.Error);
@@ -612,10 +566,10 @@ public class CartProvider : ICartProvider { }
 
 ### File Naming Conventions
 
-**Commands/Queries**:
+**Operation Inputs**:
 
-- `[Verb][Entity]Command.cs` - e.g., `CreateProductCommand.cs`
-- `[Verb][Entity]Query.cs` - e.g., `GetProductQuery.cs`
+- `[Operation]Request.cs` when an input model clarifies the contract, e.g., `CreateProductRequest.cs`
+- Do not create a request class for simple operations that are clearer as method parameters
 
 **Handlers**:
 
@@ -646,7 +600,7 @@ public static class UserRegistrationExtensions
     public static IServiceCollection AddUserRegistration(
         this IServiceCollection services)
     {
-        // Register handlers (usually auto-registered via MediatR)
+        // Register feature operations explicitly
         services.AddTransient<RegisterUserHandler>();
 
         // Register feature-specific dependencies
@@ -654,7 +608,7 @@ public static class UserRegistrationExtensions
         services.AddScoped<IPasswordHasher, PasswordHasher>();
 
         // Register validators
-        services.AddTransient<IValidator<RegisterUserCommand>,
+        services.AddTransient<IValidator<RegisterUserRequest>,
             RegisterUserValidator>();
 
         return services;
@@ -665,26 +619,19 @@ public static class UserRegistrationExtensions
 builder.Services.AddUserRegistration();
 ```
 
-**Auto-Registration with MediatR**:
-
-```csharp
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-```
-
 ### Managing Cross-Feature Communication
 
 **Problem**: Feature A needs data from Feature B.
 
 **Solutions**:
 
-**1. Shared Read Models** (CQRS approach):
+**1. Shared Feature Contracts**:
 
 ```csharp
-// Common/ReadModels/UserSummary.cs
+// Common/Contracts/UserSummary.cs
 public record UserSummary(Guid UserId, string Email, string FullName);
 
-// Both features can query this read model
+// Share the contract only when another feature needs this information
 ```
 
 **2. Domain Events** (eventual consistency):
@@ -693,27 +640,20 @@ public record UserSummary(Guid UserId, string Email, string FullName);
 // Common/Events/UserRegisteredEvent.cs
 public record UserRegisteredEvent(Guid UserId, string Email, DateTime RegisteredAt);
 
-// Feature A publishes event
-await _publisher.PublishAsync(new UserRegisteredEvent(...));
+// Feature A publishes through the application's existing event mechanism
+await eventPublisher.PublishAsync(new UserRegisteredEvent(...));
 
-// Feature B handles event
-public class SendWelcomeEmailHandler : INotificationHandler<UserRegisteredEvent>
+// Feature B handles the event through the application's existing event mechanism
+public class SendWelcomeEmailHandler
 {
-    public async Task Handle(UserRegisteredEvent notification, CancellationToken ct)
+    public async Task HandleAsync(UserRegisteredEvent registeredEvent, CancellationToken ct)
     {
         // Send welcome email
     }
 }
 ```
 
-**3. Mediator Queries** (synchronous, use sparingly):
-
-```csharp
-// Feature A needs user info from Feature B
-var userProfile = await _mediator.Send(new GetUserProfileQuery(userId));
-```
-
-**4. Shared Interface** (best for external dependencies):
+**3. Shared Interface** (best for dependencies owned by another feature):
 
 ```csharp
 // Common/Interfaces/IUserProvider.cs
@@ -730,7 +670,7 @@ public class UserProvider : IUserProvider { }
 
 ## Testing Strategy
 
-### Unit Testing Handlers
+### Unit Testing Feature Operations
 
 ```csharp
 public class RegisterUserHandlerTests
@@ -753,10 +693,10 @@ public class RegisterUserHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ValidCommand_ReturnsSuccess()
+    public async Task Handle_ValidRequest_ReturnsSuccess()
     {
         // Arrange
-        var command = new RegisterUserCommand(
+        var request = new RegisterUserRequest(
             "test@example.com",
             "Password123!",
             "John",
@@ -771,12 +711,12 @@ public class RegisterUserHandlerTests
             .Returns("hashed_password");
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.HandleAsync(request, CancellationToken.None);
 
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
-        Assert.Equal(command.Email, result.Value.Email);
+        Assert.Equal(request.Email, result.Value.Email);
 
         _dbContextMock.Verify(x => x.Users.Add(It.IsAny<User>()), Times.Once);
         _dbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
@@ -787,20 +727,20 @@ public class RegisterUserHandlerTests
     public async Task Handle_UserAlreadyExists_ReturnsFailure()
     {
         // Arrange
-        var command = new RegisterUserCommand(
+        var request = new RegisterUserRequest(
             "existing@example.com",
             "Password123!",
             "John",
             "Doe");
 
-        var existingUser = new User { Email = command.Email };
+        var existingUser = new User { Email = request.Email };
         _dbContextMock.Setup(x => x.Users.FirstOrDefaultAsync(
             It.IsAny<Expression<Func<User, bool>>>(),
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingUser);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.HandleAsync(request, CancellationToken.None);
 
         // Assert
         Assert.False(result.IsSuccess);
@@ -837,7 +777,7 @@ public class UserRegistrationIntegrationTests : IAsyncLifetime
     public async Task RegisterUser_ValidData_ReturnsSuccess()
     {
         // Arrange
-        var command = new RegisterUserCommand(
+        var request = new RegisterUserRequest(
             "newuser@example.com",
             "Password123!",
             "John",
@@ -846,13 +786,13 @@ public class UserRegistrationIntegrationTests : IAsyncLifetime
         // Act
         var response = await _client.PostAsJsonAsync(
             "/api/users/register",
-            command);
+            request);
 
         // Assert
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<RegistrationResult>();
         Assert.NotNull(result);
-        Assert.Equal(command.Email, result.Email);
+        Assert.Equal(request.Email, result.Email);
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -866,7 +806,7 @@ public class UserRegistrationIntegrationTests : IAsyncLifetime
 
 ### Testing Checklist
 
-- [ ] Unit tests for each handler
+- [ ] Unit tests for each feature operation or handler
 - [ ] Validation tests for validators
 - [ ] Integration tests for complete feature flows
 - [ ] Test happy path scenarios
@@ -902,56 +842,9 @@ public class Result<T>
 }
 ```
 
-### Pipeline Behaviors (Cross-Cutting Concerns)
+### Cross-Cutting Concerns
 
-```csharp
-// Logging behavior
-public class LoggingBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
-{
-    private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
-
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Handling {RequestName}", typeof(TRequest).Name);
-        var response = await next();
-        _logger.LogInformation("Handled {RequestName}", typeof(TRequest).Name);
-        return response;
-    }
-}
-
-// Performance behavior
-public class PerformanceBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
-{
-    private readonly ILogger<PerformanceBehavior<TRequest, TResponse>> _logger;
-    private readonly Stopwatch _timer;
-
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
-    {
-        _timer.Start();
-        var response = await next();
-        _timer.Stop();
-
-        var elapsedMilliseconds = _timer.ElapsedMilliseconds;
-        if (elapsedMilliseconds > 500)
-        {
-            _logger.LogWarning(
-                "Long Running Request: {RequestName} ({ElapsedMilliseconds}ms)",
-                typeof(TRequest).Name,
-                elapsedMilliseconds);
-        }
-
-        return response;
-    }
-}
-```
+Apply logging, validation, authorization, and performance measurement through the application's established middleware, endpoint filters, decorators, or feature code. Choose the simplest existing mechanism that covers the required boundary.
 
 ### Domain Events
 
@@ -960,18 +853,18 @@ public class PerformanceBehavior<TRequest, TResponse>
 public record UserRegisteredEvent(
     Guid UserId,
     string Email,
-    DateTime RegisteredAt) : INotification;
+    DateTime RegisteredAt);
 
 // Publishing in handler
 public class RegisterUserHandler
 {
-    private readonly IPublisher _publisher;
+    private readonly IEventPublisher _eventPublisher;
 
-    public async Task<Result> Handle(RegisterUserCommand command, CancellationToken ct)
+    public async Task<Result> HandleAsync(RegisterUserRequest request, CancellationToken ct)
     {
         // ... create user ...
 
-        await _publisher.Publish(
+        await _eventPublisher.PublishAsync(
             new UserRegisteredEvent(user.Id, user.Email, DateTime.UtcNow),
             ct);
 
@@ -981,16 +874,15 @@ public class RegisterUserHandler
 
 // Event handler in another feature
 public class SendWelcomeEmailHandler
-    : INotificationHandler<UserRegisteredEvent>
 {
     private readonly IEmailService _emailService;
 
-    public async Task Handle(
-        UserRegisteredEvent notification,
+    public async Task HandleAsync(
+        UserRegisteredEvent registeredEvent,
         CancellationToken cancellationToken)
     {
         await _emailService.SendWelcomeEmailAsync(
-            notification.Email,
+            registeredEvent.Email,
             cancellationToken);
     }
 }
@@ -1006,7 +898,7 @@ public class SendWelcomeEmailHandler
 // BAD: 500+ line handler doing everything
 public class ProcessOrderHandler
 {
-    public async Task<Result> Handle(ProcessOrderCommand command)
+    public async Task<Result> HandleAsync(ProcessOrderRequest request)
     {
         // Validate payment
         // Check inventory
@@ -1032,15 +924,15 @@ public class ProcessOrderHandler
     private readonly IInventoryService _inventoryService;
     private readonly IOrderRepository _orderRepository;
 
-    public async Task<Result> Handle(ProcessOrderCommand command)
+    public async Task<Result> HandleAsync(ProcessOrderRequest request)
     {
-        var paymentResult = await _paymentService.ProcessPaymentAsync(command.Payment);
+        var paymentResult = await _paymentService.ProcessPaymentAsync(request.Payment);
         if (!paymentResult.IsSuccess) return paymentResult;
 
-        var inventoryResult = await _inventoryService.ReserveItemsAsync(command.Items);
+        var inventoryResult = await _inventoryService.ReserveItemsAsync(request.Items);
         if (!inventoryResult.IsSuccess) return inventoryResult;
 
-        var order = await _orderRepository.CreateOrderAsync(command);
+        var order = await _orderRepository.CreateOrderAsync(request);
 
         await _publisher.Publish(new OrderCreatedEvent(order.Id));
 
@@ -1085,9 +977,9 @@ public class GetUserHandler
 {
     private readonly IUserService _userService;
 
-    public async Task<User> Handle(GetUserQuery query)
+    public async Task<User> HandleAsync(Guid userId)
     {
-        return await _userService.GetUserAsync(query.Id); // Just forwarding
+        return await _userService.GetUserAsync(userId); // Just forwarding
     }
 }
 ```
@@ -1100,12 +992,12 @@ public class GetUserHandler
 {
     private readonly IDbContext _dbContext;
 
-    public async Task<UserDto> Handle(GetUserQuery query)
+    public async Task<UserDto> HandleAsync(Guid userId)
     {
         var user = await _dbContext.Users
             .Include(u => u.Profile)
             .Include(u => u.Orders)
-            .FirstOrDefaultAsync(u => u.Id == query.Id);
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
         return user != null
             ? MapToDto(user)
@@ -1198,7 +1090,7 @@ Before (Layered):
 
 After (Vertical Slice):
 /Features/UserRegistration/
-  - RegisterUserCommand.cs (from RegisterUserRequest)
+  - RegisterUserRequest.cs (from Models/RegisterUserRequest.cs)
   - RegisterUserHandler.cs (from UserService.RegisterUser)
   - RegisterUserValidator.cs (moved as-is)
   - UserRegistrationRepository.cs (from UserRepository, feature-specific)
@@ -1246,7 +1138,6 @@ After (Vertical Slice):
 
 **Recommended Libraries**:
 
-- **MediatR**: Request/response handling
 - **FluentValidation**: Input validation
 - **AutoMapper**: Object mapping (use sparingly)
 - **Entity Framework Core**: Database access
@@ -1255,30 +1146,22 @@ After (Vertical Slice):
 
 ```csharp
 // Program.cs
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
-
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>),
-    typeof(ValidationBehavior<,>));
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>),
-    typeof(LoggingBehavior<,>));
+builder.Services.AddScoped<RegisterUserHandler>();
 ```
 
 ### Node.js / TypeScript
 
 **Recommended Libraries**:
 
-- **Mediator pattern library**: `ts-mediator` or similar
 - **class-validator**: Input validation
 - **TypeORM** or **Prisma**: Database access
 
 **Example Structure**:
 
 ```typescript
-// features/user-registration/register-user.command.ts
-export class RegisterUserCommand {
+// features/user-registration/register-user-input.ts
+export class RegisterUserInput {
   constructor(
     public readonly email: string,
     public readonly password: string,
@@ -1294,8 +1177,8 @@ export class RegisterUserHandler {
     private readonly passwordHasher: PasswordHasher
   ) {}
 
-  async handle(
-    command: RegisterUserCommand
+  async register(
+    input: RegisterUserInput
   ): Promise<Result<RegistrationResult>> {
     // Handler logic
   }
@@ -1306,33 +1189,30 @@ export class RegisterUserHandler {
 
 **Recommended Libraries**:
 
-- **mediatr**: Mediator pattern
 - **pydantic**: Data validation
 - **SQLAlchemy**: Database access
 
 **Example Structure**:
 
 ```python
-# features/user_registration/register_user_command.py
+# features/user_registration/registration_input.py
 from dataclasses import dataclass
-from mediatr import Request
 
 @dataclass
-class RegisterUserCommand(Request):
+class RegistrationInput:
     email: str
     password: str
     first_name: str
     last_name: str
 
-# features/user_registration/register_user_handler.py
-from mediatr import RequestHandler
+# features/user_registration/register_user.py
 
-class RegisterUserHandler(RequestHandler[RegisterUserCommand, Result]):
+class RegisterUser:
     def __init__(self, db_context: DbContext, password_hasher: PasswordHasher):
         self.db_context = db_context
         self.password_hasher = password_hasher
 
-    async def handle(self, command: RegisterUserCommand) -> Result:
+    async def execute(self, input: RegistrationInput) -> Result:
         # Handler logic
         pass
 ```
@@ -1341,31 +1221,20 @@ class RegisterUserHandler(RequestHandler[RegisterUserCommand, Result]):
 
 **Recommended Approach**:
 
-- **Spring MediatR** or custom mediator
 - **Bean Validation**: Input validation
 - **Spring Data JPA**: Database access
 
 **Example Structure**:
 
 ```java
-// features/userregistration/RegisterUserCommand.java
-public record RegisterUserCommand(
-    String email,
-    String password,
-    String firstName,
-    String lastName
-) implements Command<Result<RegistrationResult>> {}
-
-// features/userregistration/RegisterUserHandler.java
+// features/userregistration/UserRegistration.java
 @Component
-public class RegisterUserHandler
-    implements CommandHandler<RegisterUserCommand, Result<RegistrationResult>> {
+public class UserRegistration {
 
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
 
-    @Override
-    public Result<RegistrationResult> handle(RegisterUserCommand command) {
+    public Result<RegistrationResult> register(RegistrationInput input) {
         // Handler logic
     }
 }
@@ -1378,13 +1247,13 @@ public class RegisterUserHandler
 Before considering a feature complete:
 
 - [ ] Feature organized in dedicated folder under `/Features`
-- [ ] Command/Query object created with clear naming
-- [ ] Handler implemented with focused logic
+- [ ] Operation input or endpoint contract has clear naming
+- [ ] Feature operation implemented with focused logic
 - [ ] Validator created for input validation
 - [ ] Result/DTO defined for response
 - [ ] Repository or data access implemented (if needed)
 - [ ] API endpoint created (thin controller/route)
-- [ ] Unit tests written for handler
+- [ ] Unit tests written for the operation or handler
 - [ ] Integration tests written for complete flow
 - [ ] No direct dependencies on other features
 - [ ] Shared code only in `/Common` when truly needed
@@ -1415,9 +1284,9 @@ Periodically review the overall architecture:
 - [ ] Features are organized by business capability, not technical layer
 - [ ] Shared kernel remains thin and focused
 - [ ] No circular dependencies between features
-- [ ] Cross-cutting concerns handled by pipeline behaviors
+- [ ] Cross-cutting concerns handled by established middleware, filters, or feature code
 - [ ] Database migrations are feature-specific when possible
-- [ ] API endpoints are thin and delegate to handlers
+- [ ] API endpoints are thin and delegate to feature operations or handlers
 - [ ] Tests are organized by feature
 - [ ] New team members can understand feature boundaries
 - [ ] Features can be developed in parallel without conflicts
@@ -1438,8 +1307,8 @@ Vertical slice architecture provides:
 1. Organize by feature, not by technical layer
 2. Keep features independent and self-contained
 3. Minimize shared code - only share true cross-cutting concerns
-4. Use mediator pattern for request/response handling
-5. Implement cross-cutting concerns via pipeline behaviors
+4. Invoke feature operations directly through clear application boundaries
+5. Handle cross-cutting concerns with existing middleware, filters, or feature code
 6. Test features in isolation
 7. Migrate gradually from layered architecture
 
@@ -1447,8 +1316,8 @@ Vertical slice architecture provides:
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-10-22
+**Document Version**: 1.0.1
+**Last Updated**: 2026-11-13
 **Maintainer**: AI-Assisted Development Team
 **Related Instructions**:
 

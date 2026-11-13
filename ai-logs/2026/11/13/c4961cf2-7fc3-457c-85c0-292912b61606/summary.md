@@ -6,7 +6,7 @@ chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
 prompt: |
   create a product requirements specification a task manager
 started: "2026-11-13T08:12:22.1498043-08:00"
-ended: "2026-11-13T09:40:38.8013479-08:00"
+ended: "2026-11-13T11:21:30.360-08:00"
 task_durations:
   - task: "Repository and product-context review"
     duration: "00:00:35"
@@ -56,7 +56,17 @@ task_durations:
     duration: "00:05:00"
   - task: "Recording architecture approval and linked status updates"
     duration: "00:01:00"
-total_duration: "00:50:00"
+  - task: "Vertical-slice roadmap and records"
+    duration: "00:01:58"
+  - task: "Final provenance reconciliation"
+    duration: "00:00:41"
+  - task: "S01 implementation specification and verification"
+    duration: "00:07:00"
+  - task: "Removing CQRS-specific patterns from vertical-slice guidance"
+    duration: "00:04:00"
+  - task: "Handler-neutral consistency updates and final verification"
+    duration: "00:02:09"
+total_duration: "01:05:48"
 ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 source: "user request"
 ---
@@ -67,11 +77,11 @@ source: "user request"
 - Date: 2026-11-13
 - Operator: johnmillerATcodemag-com
 - Model: unknown/unknown@unknown
-- Duration: 00:50:00
+- Duration: 01:05:48
 
 ## Objective
 
-Maintain the approved task-manager PRS and record requester approval of the grounded architecture specification without presenting unresolved technical or operational decisions as approved.
+Maintain the approved task-manager PRS and architecture, create reviewable slice specifications, and keep implementation guidance clear and non-prescriptive about CQRS without implying implementation authorization.
 
 ## Completed
 
@@ -83,6 +93,9 @@ Maintain the approved task-manager PRS and record requester approval of the grou
 - `task-manager-requirements.md` v0.6 - Recorded final list/priority/conflict decisions, browser/accessibility targets, pilot threshold timing, and requester approval; retained pre-production gates.
 - `task-manager-architecture.md` - Reviewable architecture proposal for a React/TypeScript browser client, ASP.NET Core modular monolith, and PostgreSQL, with three Mermaid diagrams, trade-offs, security/operations design, roadmap, and open guidance conflicts.
 - `task-manager-architecture.md` - Recorded requester approval dated 2026-11-13; implementation authorization and remaining pre-production decisions remain separate.
+- `task-manager-implementation-roadmap.md` - Draft dependency-aware vertical-slice plan mapped to PRS v0.8 and the approved architecture; it does not authorize implementation.
+- `specs/task-manager/S01-provision-browser-task-space.spec.md` - Blocked S01 implementation-spec draft with traceable criteria, planned checks, and unresolved Phase 0/security/privacy decisions; it does not authorize implementation.
+- `.github/instructions/vertical-slice-implementation.instructions.md` v1.0.1 - Removed required CQRS/MediatR patterns, made handler examples/checklists consistent with operation alternatives, and adopted optional operation inputs, direct feature calls, and framework-neutral cross-cutting guidance.
 - `.github/instructions/aspnet-core.instructions.md` v1.1.0 - Removed unapproved pairing/recovery and default-list requirements; aligned backend behavior with the account-free browser credential.
 - `.github/instructions/react-typescript.instructions.md` v1.1.0 - Aligned authentication errors and named-list deletion with the approved MVP.
 - `.github/instructions/postgresql.instructions.md` v1.1.0 - Allowed unassigned tasks/no default list; specified 30-day maximum backups and restore-time deletion-ledger application.
@@ -107,7 +120,11 @@ Maintain the approved task-manager PRS and record requester approval of the grou
 - Requester confirmed no pairing/recovery, tasks optionally assigned to user-created lists with no default list, and immediate active-store deletion with backups expiring within 30 days and a minimal restore-time deletion ledger.
 - Updated the approved PRS to v0.7 and aligned the client, backend, and database instructions; retained credential lifetime, inaccessible-workspace purge, overdue time zone, and pilot operations as pre-production gates.
 - Requester approved the architecture specification on 2026-11-13; recorded the approval in the architecture, PRS, and README without treating it as implementation authorization.
+- Used PRS v0.8 as the current product baseline and flagged the architecture document's stale PRS v0.7 reference for reconciliation before implementation planning is baselined.
+- Marked S01 blocked rather than invent credential lifetime/revocation, inaccessible-workspace purge, abuse limits, first-use/retry behavior, or unselected tooling; the repository has no application or test project.
+- Mapped all seven S01 acceptance criteria to planned checks, verified relative links and whitespace, and left test execution pending application/tooling creation.
+- Kept vertical-slice feature boundaries and focused handlers while removing mandated command/query models, mediator dispatch, MediatR setup, and CQRS-labeled guidance.
 
 ## Next steps
 
-- Record implementation authorization separately after the applicable pre-production gates are resolved; pilot owners still need to establish the activation baseline and approve the numeric threshold before general launch.
+- Resolve S01 blockers and Phase 0 decisions, reconcile the architecture's requirements-baseline reference, select implementation/test tooling, and record implementation authorization before implementing S01. Pilot owners still need to establish the activation baseline and approve its numeric threshold before general launch.
