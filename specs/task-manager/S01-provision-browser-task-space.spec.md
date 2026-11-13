@@ -21,11 +21,16 @@ revisions:
     date: "2026-11-13"
     change: "Recorded requester approval of the S01 specification; implementation authorization and technical/security review remain separate."
     ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
+  - chat_id: "d45afcf0-3a5c-43c0-a5f9-91947ac159c3"
+    date: "2026-11-13"
+    change: "Implemented and verified S01 while preserving the independent technical/security review and pre-pilot gates."
+    ai_log: "ai-logs/2026/11/13/d45afcf0-3a5c-43c0-a5f9-91947ac159c3/conversation.md"
 ---
 
 # S01: Provision and Access a Browser Task Space
 
 - Status: Approved
+- Implementation evidence: Code and focused verification are recorded; independent technical/security review remains required before merge.
 - Approval: Product owner (requester), 2026-11-13. Approval does not grant implementation authorization.
 - Owner/reviewer: Product owner (requester); technical/security reviewer and privacy/operations owners to be assigned
 - Sources:
@@ -58,20 +63,20 @@ An individual can initialize and revisit one task space in a browser, while the 
 
 ## Context and dependencies
 
-- Existing implementation and conventions: The repository currently contains product/architecture/roadmap documentation, instructions, and chat records; no application source, solution/project, package manifest, or test project was found. Approved stack direction is React/TypeScript, ASP.NET Core, and PostgreSQL. Exact versions, API style, data-access, migration, test, and hosting tools are unselected.
-- Prerequisites: Phase 0 of the [roadmap](../../task-manager-implementation-roadmap.md#phase-plan); no prior feature slice. Before implementation, complete technical/security review of the decisions below, record separate implementation authorization, and select compatible tooling and API/data/migration/test approaches. The architecture source reference is aligned to PRS v0.8.
+- Existing implementation and conventions: The repository began with documentation only. S01 now uses a .NET 10 ASP.NET Core minimal API, React 19.3.1/TypeScript 7.0.2/Vite 8.3.8, Npgsql 10.0.3, transactional SQL migration scripts applied with `psql`, xUnit, and Playwright 1.65.0. The hosting provider remains unselected.
+- Prerequisites: No prior feature slice. Issue assignment on 2026-11-13 explicitly authorized this implementation only; independent technical/security review remains required before merge. The architecture source reference is aligned to PRS v0.8.
 - Environment: Use isolated development/test configuration and disposable test data. Workspace-isolation checks require a real PostgreSQL integration environment; mocks alone do not satisfy them. Never use pilot or production data for development/test.
-- Assumptions: The requester-approved account-free, single-browser, no-pairing/no-recovery model and the architecture's React/ASP.NET Core/PostgreSQL direction remain authoritative. The requester selected a persistent Secure, HttpOnly cookie with a 30-day absolute expiry and no user reset/recovery; technical/security review is still required. Same-origin delivery is preferred by the architecture; SameSite, origin, and CSRF controls require security review.
+- Assumptions: The requester-approved account-free, single-browser, no-pairing/no-recovery model and the architecture's React/ASP.NET Core/PostgreSQL direction remain authoritative. The requester selected a persistent Secure, HttpOnly cookie with a 30-day absolute expiry and no user reset/recovery. Same-origin delivery is preferred by the architecture; the implemented SameSite, Origin, CSRF, activation, and retry choices require independent security review before merge.
 - Recorded product decisions and operational gates:
   1. After showing the no-recovery disclosure, require a separate explicit "Create new task space" action. A missing, invalid, or expired credential never silently creates a replacement space.
-  2. Use a persistent Secure, HttpOnly cookie with a 30-day absolute expiry. Reject expired credentials; there is no user reset/recovery. Server-side revocation must use an approved operations procedure. These choices require technical/security validation before implementation.
+  2. Use a persistent Secure, HttpOnly cookie with a 30-day absolute expiry. Reject expired credentials; there is no user reset/recovery. Revocation of an activated credential must use an approved operations procedure; duplicate/retry compensation applies only to unconfirmed initialization credentials and requires security review.
   3. S01 includes configurable provisioning/protected-request abuse controls and safe outcomes. Numeric rate-limit values are a pre-pilot gate, not a blocker to S01 specification review.
   4. Purge ownership and timing for inaccessible workspaces are a pre-pilot privacy/operations gate, not an S01 implementation behavior.
-- Open questions/blockers before implementation:
-  1. Assign technical/security reviewers to validate credential expiry/revocation, cookie SameSite, origin/CSRF controls, and the initialization/retry design.
-  2. Approve a server-side idempotency/correlation design for concurrent first-use requests and ambiguous retries. The mechanism must not use a client-supplied workspace identifier or treat a correlation value as authorization.
-  3. Select compatible versions and exact API, persistence, migration, and test approaches. The repository has no application or test project, so executable commands remain unavailable until this is done.
-  4. Record implementation authorization separately. This specification being ready for review does not authorize code work.
+- Remaining review gates:
+  1. Obtain independent technical/security approval for the 30-day credential lifecycle, SameSite `Strict`, exact-Origin/CSRF policy, and the UUIDv4 initialization-key/confirmation/cancellation behavior before merge.
+  2. Confirm the operations procedure for revoking activated credentials before pilot. No user reset/recovery or application revocation endpoint exists.
+  3. Approve numeric abuse limits and assign an owner/timing for inaccessible-workspace purge before pilot.
+  4. Decide trusted-proxy/forwarded-IP handling and production TLS/origin configuration before deployment. No production deployment is authorized.
 
 ## Behavior and contracts
 
@@ -104,17 +109,29 @@ An individual can initialize and revisit one task space in a browser, while the 
 
 ## Verification
 
-No application or test project exists, so there is no repository-supported test command or working directory yet. The checks below are planned; test names are provisional, and commands must be added after Phase 0 selects the project/tooling. Cross-workspace and persistence checks require a real, isolated PostgreSQL test database.
+The application and test projects were scaffolded for the approved stack. Cross-workspace and persistence checks use a real, isolated PostgreSQL database; mocks are not substituted.
 
 | Criterion | Planned test/check | Command and working directory | Expected result |
 |-----------|--------------------|-------------------------------|-----------------|
-| AC-001 | Proposed browser acceptance check: explicit first-use action follows disclosure | Not available; no browser application or test runner exists | No-recovery disclosure and create action appear; no workspace is created until selection |
-| AC-002 | Proposed provisioning API and PostgreSQL integration tests | Not available; no solution, project, or test runner exists | One committed workspace/verifier pair; raw credential absent from storage; cookie and server verifier expire after 30 days |
-| AC-003 | Proposed credential-validation and cross-workspace PostgreSQL integration tests | Not available; no solution, project, or test runner exists | Valid credential reaches only its associated workspace; cross-workspace reads and writes are denied |
-| AC-004 | Proposed API tests for missing, invalid, expired, and revoked credentials and safe errors | Not available; no solution, project, or test runner exists | No protected data or workspace-existence disclosure; no implicit replacement workspace; credentials are rejected at/after expiry |
-| AC-005 | Proposed PostgreSQL-backed concurrent initialization and ambiguous-retry integration tests | Not available; no solution, project, or test runner exists | Server-side correlation prevents unintended duplicate/orphan workspace state without acting as authorization |
-| AC-006 | Proposed security tests plus review of cookie, request, persistence, logging, origin/CSRF, and abuse-control behavior | Not available; no security/test tooling exists | No credential leakage; reviewed request protections and configurable controls produce safe outcomes; numeric limits are approved before pilot |
-| AC-007 | Proposed keyboard/browser acceptance check | Not available; no browser application or test runner exists | First-use and error workflows are keyboard operable with visible focus and accessible feedback |
+| AC-001 | `PostgresIntegrationTests.First_visit_requires_explicit_creation_and_issues_only_a_protected_cookie`; browser first-use test | `TASK_MANAGER_TEST_CONNECTION_STRING='Host=127.0.0.1;Port=54329;Database=task_manager_test;Username=postgres' dotnet test tests/TaskManager.Api.Tests/TaskManager.Api.Tests.csproj`; `npm run test:e2e --prefix src/client` (repository root) | Passed: initial protected read creates nothing; browser sends no provisioning request before explicit selection |
+| AC-002 | PostgreSQL API test above verifies one workspace/verifier pair and 30-day server expiry; cookie assertions check Secure, HttpOnly, Path, no Domain, and SameSite; browser confirms receipt before displaying ready; independent review remains open | Same commands as AC-001 | Passed for persistence, expiry, and attributes; SameSite `Strict` is selected but technical/security approval is pending |
+| AC-003 | `PostgresIntegrationTests.Protected_write_uses_credential_workspace_and_ignores_client_workspace_ids`; code review of the credential-derived read boundary | PostgreSQL `dotnet test` command above (repository root) | Passed: real-PostgreSQL write with workspace B in query/body changes only workspace A derived from its credential; S01 contains no task/list data API |
+| AC-004 | `PostgresIntegrationTests.Missing_invalid_expired_and_revoked_credentials_never_provision_replacements` | PostgreSQL `dotnet test` command above (repository root) | Passed: missing, malformed, expired, and revoked credentials receive 401; no replacement workspace is created |
+| AC-005 | `PostgresIntegrationTests.Duplicate_initialization_key_revokes_the_unconfirmed_workspace_without_creating_another`, `Concurrent_initialization_requests_do_not_leave_duplicate_active_workspaces`, `Repeated_initialization_with_the_issued_cookie_is_idempotent`, `Duplicate_initialization_without_a_cookie_does_not_revoke_an_activated_credential`, `Cancelled_duplicate_initialization_cleans_up_the_unconfirmed_attempt`, and `Concurrent_confirmation_requests_are_idempotent` | PostgreSQL `dotnet test` command above (repository root) | Passed: concurrent and ambiguous unauthenticated retries create no duplicate active workspace; valid-cookie retry and confirmation are idempotent, cancellation compensation completes, and duplicate requests cannot revoke a confirmed credential |
+| AC-006 | PostgreSQL tests for Origin rejection and configurable provisioning/protected-request 429 outcomes; browser test verifies empty initialization body and JavaScript cannot read the credential; source review of URL/storage/logging surfaces | PostgreSQL `dotnet test` and `npm run test:e2e --prefix src/client` (repository root) | Passed for automated checks. Independent review of SameSite/Origin/CSRF and duplicate-attempt compensation remains required; numeric pilot limits remain unapproved |
+| AC-007 | Playwright keyboard/focus/progress test and unavailable-service feedback test | `npm run test:e2e --prefix src/client` (repository root; Chromium installed) | Passed: create flow is keyboard-operable, focus is visible, and status/error feedback is announced |
+
+### Execution evidence
+
+Prerequisites: .NET 10 SDK, Node 22/npm, Docker, Chromium (`npx playwright install chromium`), and a disposable PostgreSQL 16 database. The test database was loopback-bound and used only for this verification.
+
+- `dotnet test tests/TaskManager.Api.Tests/TaskManager.Api.Tests.csproj` with `TASK_MANAGER_TEST_CONNECTION_STRING=Host=127.0.0.1;Port=54329;Database=task_manager_test;Username=postgres` - passed 14 tests, 0 skipped, against PostgreSQL.
+- `npm run lint --prefix src/client` - passed.
+- `npm run build --prefix src/client` - passed.
+- `npm run test:e2e --prefix src/client` with the same test connection string and the migration applied to the disposable database - passed 4 Chromium tests.
+- Applied `001_create_workspace_tables.sql` twice to a disposable schema with `psql -v ON_ERROR_STOP=1` - both runs completed successfully.
+
+The exact setup commands and implementation choices are also documented in the root [README](../../README.md). These automated results do not complete the required independent technical/security review. Numeric abuse limits and inaccessible-workspace purge owner/timing remain pre-pilot gates.
 
 ## Showcase and completion
 
@@ -123,7 +140,7 @@ No application or test project exists, so there is no repository-supported test 
 3. Use a second isolated profile to initialize a distinct space, then run the approved integration tests to verify neither profile can read or mutate the other's workspace.
 4. Remove or invalidate a test credential and verify the protected flow is explicit and does not silently replace the inaccessible space. Do not use production credentials or data.
 
-- Completion evidence: Technical/security review of the credential, cookie, CSRF/origin, and correlation decisions; focused tests and real-PostgreSQL isolation evidence mapped to AC-001 through AC-007; sanitized security review; exact test commands and working directory. Before pilot, record numeric abuse limits and inaccessible-workspace purge owner/timing. No execution evidence exists yet.
-- Execution evidence: Not run; this is a specification awaiting review, and the repository has no application/test project.
+- Completion evidence: Focused API, browser, and real-PostgreSQL evidence mapped to AC-001 through AC-007 is recorded above. Independent technical/security review of SameSite, Origin/CSRF, correlation/retry compensation, and sanitized operational signals remains required before merge. Before pilot, record numeric abuse limits and inaccessible-workspace purge owner/timing.
+- Execution evidence: See the command and result records above.
 - Risks: Credential loss or expiry is unrecoverable; incorrect first-use behavior can mislead users or create unintended workspaces; workspace isolation failure can expose another anonymous user's data. The 30-day lifetime is the requester's selected policy pending technical/security validation.
-- Next dependency/handoff: Assign reviewers and complete technical/security review, select compatible tooling and test approaches, and record implementation authorization separately. Then request the [implement-vertical-slice skill](../../.github/skills/implement-vertical-slice/SKILL.md) with this specification path; specification review does not authorize implementation.
+- Next dependency/handoff: Request independent technical/security review before merge. Resolve forwarded-IP handling, numeric abuse limits, and inaccessible-workspace purge ownership/timing before pilot. No production deployment is authorized.
