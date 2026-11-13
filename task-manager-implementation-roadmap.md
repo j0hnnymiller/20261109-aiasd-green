@@ -17,13 +17,17 @@ revisions:
     date: "2026-11-13"
     change: "Clarified S01 and pilot-readiness dependencies from the requester's first-use and 30-day credential choices; moved purge and numeric abuse limits to pre-pilot gates and reconciled the architecture baseline."
     ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
+  - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
+    date: "2026-11-13"
+    change: "Recorded Copilot's S01 implementation authorization through GitHub issue #2 and separated pending review and pilot gates from authorization."
+    ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
 ---
 
 # Task Manager Vertical-Slice Implementation Roadmap
 
 ## Status and Scope
 
-**Plan status:** Draft for execution planning. This roadmap does not authorize implementation.
+**Plan status:** Draft for execution planning. S01 implementation is authorized only through GitHub issue #2; this roadmap does not authorize other slices or production deployment.
 
 **Product baseline:** [Task Manager PRS v0.8](task-manager-requirements.md), approved by the requester on 2026-11-13.
 
@@ -44,13 +48,13 @@ The plan covers the approved individual, account-free, browser task manager: wor
 - The architecture specifies account-free, single-browser access without pairing or recovery. The requester selected a persistent Secure, HttpOnly credential cookie with a 30-day absolute expiry; technical/security validation remains required. Inaccessible-workspace purge ownership/timing and numeric rate limits remain pre-pilot gates.
 - The approved due-date rule uses the user's current local date. Confirm whether that means the browser's current time zone before implementing overdue calculations.
 - No schedule, estimates, team allocation, workload, budget, or hosting provider was supplied. The sequence below is dependency-based, not a duration or staffing commitment.
-- The requester approved the PRS and architecture, but implementation authorization must be recorded separately before code work begins.
+- The requester approved the PRS and architecture, and explicitly authorized Copilot to implement S01 through GitHub issue #2 on 2026-11-13. No authorization beyond S01 or for production deployment is implied.
 
 ## Phase Plan
 
 | Phase                              | Objective                                                                                   | Included work                                                                                                                                                                                                                                                                                     | Exit gate                                                                                                                                                            |
 | ---------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Authorization and readiness     | Make implementation decisions explicit and distinguish S01 prerequisites from later gates. | Record separate implementation authorization; select compatible tool/library versions and API/data/migration/test approaches; obtain technical/security review of the selected credential lifecycle, first-use, cookie, origin/CSRF, and initialization-retry behavior. Assign owners and due gates for inaccessible-workspace purge and numeric abuse limits before pilot; resolve overdue time-zone interpretation before S06. | S01 decisions have technical/security review and implementation authorization is recorded before code work. Pilot and S06 gates have owners and due gates; this plan itself does not authorize implementation. |
+| 0. Authorization and readiness     | Make implementation decisions explicit and distinguish S01 authorization from later review and pilot gates. | S01 authorization is recorded in issue #2; select compatible tool/library versions and API/data/migration/test approaches; obtain independent technical/security review of the selected credential lifecycle, first-use, cookie, origin/CSRF, and initialization-retry behavior before merge or deployment. Assign owners and due gates for inaccessible-workspace purge and numeric abuse limits before pilot; resolve overdue time-zone interpretation before S06. | S01 implementation may proceed under issue #2; independent technical/security review is complete before merge or deployment. Pilot and S06 gates have owners and due gates; this plan does not authorize other slices or production deployment. |
 | 1. Workspace foundation            | Give one browser a secure, isolated task space.                                             | S01                                                                                                                                                                                                                                                                                               | Workspace provisioning, credential handling, and cross-workspace isolation tests pass.                                                                               |
 | 2. Core task lifecycle             | Deliver durable task capture and change.                                                    | S02-S03                                                                                                                                                                                                                                                                                           | Create/view/edit/complete flows pass API, PostgreSQL integration, and browser acceptance tests, including failure and stale-write cases.                             |
 | 3. Organize and find work          | Deliver the selected task organization and discovery behaviors.                             | S04-S07                                                                                                                                                                                                                                                                                           | List, priority, overdue, filters, and search acceptance criteria pass; keyboard behavior is covered in each workflow.                                                |
