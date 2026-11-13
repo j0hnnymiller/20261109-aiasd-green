@@ -15,12 +15,17 @@ source: "user request"
 name: "react-typescript"
 description: "Use when building or changing the task-manager React and TypeScript interface, including accessibility, API state, and refresh behavior."
 applyTo: "**/*.{ts,tsx}"
-version: "1.0.0"
+version: "1.1.0"
 author: "jMM-at-CODETraining"
 tags: ["react", "typescript", "frontend", "task-manager"]
 owner: "Development Team"
-reviewedDate: "2026-11-12"
-nextReview: "2027-02-12"
+reviewedDate: "2026-11-13"
+nextReview: "2027-02-13"
+revisions:
+  - chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
+    date: "2026-11-13"
+    change: "Aligned authentication feedback and verification with account-free single-browser/no-recovery and named-list deletion behavior."
+    ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 ---
 
 # React and TypeScript Instructions
@@ -52,24 +57,24 @@ Apply these rules to the task-manager browser interface. The approved stack is R
 - Coalesce duplicate focus/visibility refresh triggers. Prevent older refresh or mutation responses from overwriting newer confirmed state.
 - Preserve drafts during refresh. On refresh failure, retain the previous view and show a clear stale/error state; never replace it with an empty list that implies success.
 - On save failure, preserve user input and explain the failure. Show “Saved” only after server confirmation; represent ambiguous outcomes as ambiguous, not as definite failure or success.
-- Handle validation, unauthenticated access, unavailable resources, version conflicts, rate limits, and service failures as distinct user-visible states. Provide pairing or recovery guidance for authentication failure; do not silently create a new workspace.
-- Make task deletion explicit and immediate after confirmation. Do not add undo, trash, list removal, workspace deletion, or other excluded product behavior.
+- Handle validation, unauthenticated access, unavailable resources, version conflicts, rate limits, and service failures as distinct user-visible states. For an invalid browser credential, explain that the task space is inaccessible and that the MVP has no account, pairing, or recovery; do not silently create a new workspace.
+- Make task deletion explicit and immediate after confirmation. Do not add undo, trash, or workspace deletion. Named-list deletion must leave its tasks intact and unassigned.
 
 ## Security and Accessibility
 
 - Treat all browser data and input as untrusted. Render task content as text; do not inject user-controlled HTML.
-- Do not put device credentials, pairing grants, recovery secrets, or other secrets in JavaScript storage, URLs, logs, analytics, or screenshots. Let the server manage secure device cookies.
+- Do not put browser credentials or other secrets in JavaScript storage, URLs, logs, analytics, or screenshots. Let the server manage the secure HttpOnly cookie; the MVP has no pairing grants or recovery secrets.
 - Use semantic HTML, associated form labels, keyboard-operable controls, visible focus, and accessible names. Announce loading, save outcomes, validation errors, conflicts, and stale-data warnings to assistive technology without stealing focus.
 - Preserve useful form values and provide actionable validation feedback; do not rely on color alone to communicate status.
 
 ## Verification Checklist
 
 - [ ] Type-check and run the repository's configured frontend checks once tooling is selected.
-- [ ] Verify keyboard and screen-reader access for task, list, pairing, and recovery flows.
+- [ ] Verify keyboard and screen-reader access for task, list, and browser-credential error flows.
 - [ ] Verify refresh failure preserves the previous view and unsaved drafts.
 - [ ] Verify stale responses cannot overwrite newer edits and conflicts retain the user's draft.
 - [ ] Verify no polling, hidden offline writes, sensitive browser persistence, or unauthorized workspace access is introduced.
-- [ ] Verify date-only due-date behavior across browser time zones and workspace-zone boundaries.
+- [ ] Verify date-only due-date behavior against the approved local-date rule, including browser time-zone changes.
 - [ ] Verify excluded product capabilities are not exposed.
 
 ## Summary
@@ -77,6 +82,6 @@ Apply these rules to the task-manager browser interface. The approved stack is R
 Keep the React/TypeScript client accessible and typed, with server-confirmed state, explicit refresh and error behavior, preserved drafts, and no client-side authority over workspace access.
 
 **Related Instructions**: [ASP.NET Core](aspnet-core.instructions.md), [PostgreSQL](postgresql.instructions.md)
-**Document Version**: 1.0.0
-**Last Updated**: 2026-11-12
+**Document Version**: 1.1.0
+**Last Updated**: 2026-11-13
 **Maintainer**: Development Team

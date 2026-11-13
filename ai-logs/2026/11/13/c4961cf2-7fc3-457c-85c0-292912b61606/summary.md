@@ -6,7 +6,7 @@ chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
 prompt: |
   create a product requirements specification a task manager
 started: "2026-11-13T08:12:22.1498043-08:00"
-ended: "2026-11-13T09:17:30-08:00"
+ended: "2026-11-13T09:40:38.8013479-08:00"
 task_durations:
   - task: "Repository and product-context review"
     duration: "00:00:35"
@@ -50,7 +50,13 @@ task_durations:
     duration: "00:05:00"
   - task: "Documentation and verification"
     duration: "00:01:30"
-total_duration: "00:39:30"
+  - task: "Architecture conflict decisions and guidance alignment"
+    duration: "00:04:30"
+  - task: "Documentation and verification"
+    duration: "00:05:00"
+  - task: "Recording architecture approval and linked status updates"
+    duration: "00:01:00"
+total_duration: "00:50:00"
 ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 source: "user request"
 ---
@@ -61,20 +67,25 @@ source: "user request"
 - Date: 2026-11-13
 - Operator: johnmillerATcodemag-com
 - Model: unknown/unknown@unknown
-- Duration: 00:39:30
+- Duration: 00:50:00
 
 ## Objective
 
-Maintain the approved task-manager PRS and produce a grounded architecture proposal without presenting unresolved technical or operational decisions as approved.
+Maintain the approved task-manager PRS and record requester approval of the grounded architecture specification without presenting unresolved technical or operational decisions as approved.
 
 ## Completed
 
-- `task-manager-requirements.md` v0.6 - Approved product baseline with user-selected behavior, acceptance criteria, and assigned pre-production technical/privacy/operational gates.
+- `task-manager-requirements.md` v0.7 - Approved product baseline with resolved browser access, list-assignment, and deleted-task backup-retention decisions; remaining pre-production gates retained.
+- `task-manager-requirements.md` v0.8 - Recorded requester approval of the architecture specification while retaining separate implementation authorization and pre-production gates.
 - `task-manager-requirements.md` v0.3 - Added source-traceable candidate business rules and event outcomes, evidence classification, and open questions for search, due dates, deletion, and save conflicts.
 - `task-manager-requirements.md` v0.4 - Added proposed defaults for remaining open questions and marked unresolved targets/ownership with `[NEEDS DECISION]`.
 - `task-manager-requirements.md` v0.5 - Recorded the user's product choices, added named-list, priority, overdue, and save/conflict requirements, and left remaining details and formal approval pending.
 - `task-manager-requirements.md` v0.6 - Recorded final list/priority/conflict decisions, browser/accessibility targets, pilot threshold timing, and requester approval; retained pre-production gates.
 - `task-manager-architecture.md` - Reviewable architecture proposal for a React/TypeScript browser client, ASP.NET Core modular monolith, and PostgreSQL, with three Mermaid diagrams, trade-offs, security/operations design, roadmap, and open guidance conflicts.
+- `task-manager-architecture.md` - Recorded requester approval dated 2026-11-13; implementation authorization and remaining pre-production decisions remain separate.
+- `.github/instructions/aspnet-core.instructions.md` v1.1.0 - Removed unapproved pairing/recovery and default-list requirements; aligned backend behavior with the account-free browser credential.
+- `.github/instructions/react-typescript.instructions.md` v1.1.0 - Aligned authentication errors and named-list deletion with the approved MVP.
+- `.github/instructions/postgresql.instructions.md` v1.1.0 - Allowed unassigned tasks/no default list; specified 30-day maximum backups and restore-time deletion-ledger application.
 - `README.md` - Initially linked the PRS while it was a draft.
 - `README.md` - Updated the PRS link to approved baseline v0.6 and added the architecture proposal link.
 - `ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md` - Chat provenance log.
@@ -92,8 +103,11 @@ Maintain the approved task-manager PRS and produce a grounded architecture propo
 - Recorded the requester as product owner and approver; display name was not provided.
 - Delegated identity/recovery, retention/purge, privacy-reviewed instrumentation, and numeric service objectives to technical/security/privacy/operations owners before general launch.
 - User selected account-free, single-browser access with no pairing or recovery for this architecture proposal and a small pilot with service targets TBD.
-- Kept the architecture proposal pending review; documented conflicts with backend pairing/recovery guidance, PostgreSQL task-list association/default-list guidance, and backup-retention guidance.
+- Initially kept the architecture proposal pending review and documented conflicts with backend pairing/recovery guidance, PostgreSQL task-list association/default-list guidance, and backup-retention guidance; the requester subsequently approved the architecture specification.
+- Requester confirmed no pairing/recovery, tasks optionally assigned to user-created lists with no default list, and immediate active-store deletion with backups expiring within 30 days and a minimal restore-time deletion ledger.
+- Updated the approved PRS to v0.7 and aligned the client, backend, and database instructions; retained credential lifetime, inaccessible-workspace purge, overdue time zone, and pilot operations as pre-production gates.
+- Requester approved the architecture specification on 2026-11-13; recorded the approval in the architecture, PRS, and README without treating it as implementation authorization.
 
 ## Next steps
 
-- Technical/security/privacy/operations owners to review and approve the architecture proposal, reconcile its guidance conflicts, and complete pre-production gates before implementation/general launch. Pilot owners to establish the activation baseline and approve the numeric threshold before general launch.
+- Record implementation authorization separately after the applicable pre-production gates are resolved; pilot owners still need to establish the activation baseline and approve the numeric threshold before general launch.

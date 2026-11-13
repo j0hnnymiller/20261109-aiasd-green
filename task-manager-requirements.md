@@ -6,7 +6,7 @@ chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
 prompt: |
   create a product requirements specification a task manager
 started: "2026-11-13T08:12:22.1498043-08:00"
-ended: "2026-11-13T09:09:00.4955761-08:00"
+ended: "2026-11-13T09:40:38.8013479-08:00"
 task_durations:
   - task: "Repository and product-context review"
     duration: "00:00:35"
@@ -44,7 +44,13 @@ task_durations:
     duration: "00:01:26"
   - task: "Approval decision recording and final verification"
     duration: "00:00:51"
-total_duration: "00:31:30"
+  - task: "Architecture conflict decisions and guidance alignment"
+    duration: "00:04:30"
+  - task: "Requirements, provenance, and validation updates"
+    duration: "00:05:00"
+  - task: "Recording architecture approval status"
+    duration: "00:01:00"
+total_duration: "00:42:00"
 ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 source: "user request"
 ---
@@ -59,7 +65,7 @@ source: "user request"
 | Product owner | Requesting user (display name not provided)                      |
 | Approver      | Requesting user (display name not provided)                      |
 | Status        | Approved baseline; pre-production technical/privacy gates remain |
-| Version       | 0.6                                                              |
+| Version       | 0.8                                                              |
 
 This document records the approved initial product baseline based on the request and product-owner decisions. No user research, stakeholder brief, or business goals were supplied; the audience and workflow assumptions should be validated during the pilot.
 
@@ -155,10 +161,10 @@ These analyst-derived rules summarize the approved requirements below. The user 
 | CBR-02 | User saves a task edit.                                                     | Title, description, and due date can be changed.                                                                  | An empty title is rejected and the prior title is retained; other validation behavior is unspecified.                | TM-FR-03  |
 | CBR-03 | User opens the task view.                                                   | Each saved task shows its title and completion state, plus any saved due date.                                    | Empty-view behavior is unspecified.                                                                                  | TM-FR-02  |
 | CBR-04 | User marks a task complete or reopens it.                                   | The task state changes and remains saved after navigating away and returning.                                     | Failure handling is unspecified.                                                                                     | TM-FR-04  |
-| CBR-05 | User requests deletion and confirms or cancels.                             | Confirmation permanently removes the task from the active task space; cancellation leaves it available.           | The product provides no restore feature; infrastructure retention/purge is a pre-production privacy/operations gate. | TM-FR-05  |
+| CBR-05 | User requests deletion and confirms or cancels.                             | Confirmation immediately removes the task from the active store; cancellation leaves it available.               | The product provides no restore feature. Backups may retain deleted records for no more than 30 days; restore-time ledger reapplication prevents them from reappearing. Inaccessible-workspace purge timing remains a privacy/operations gate. | TM-FR-05  |
 | CBR-06 | User selects an open, completed, or all-tasks filter.                       | Only tasks in the selected state, or both states, are shown.                                                      | Empty-filter behavior is unspecified.                                                                                | TM-FR-06  |
 | CBR-07 | User searches by title.                                                     | Case-insensitive substring matches are returned after query whitespace is trimmed; an empty query clears search.  | No-results state is explicit.                                                                                        | TM-FR-07  |
-| CBR-08 | User refreshes or returns to the same task space after a successful change. | Create, edit, completion, and deletion outcomes remain consistent.                                                | Anonymous task-space identity, isolation, and recovery are pre-production technical/security gates.                  | TM-NFR-01 |
+| CBR-08 | User refreshes or returns to the same task space with its valid browser credential. | Create, edit, completion, and deletion outcomes remain consistent.                         | Losing or expiring the credential makes the space inaccessible; the MVP has no pairing or recovery. Credential lifecycle and workspace-isolation validation are security gates. | TM-NFR-01 |
 | CBR-09 | User completes a core workflow using a keyboard.                            | Core workflows are operable without pointer input and keyboard focus is visible.                                  | Assistive-technology conformance is not established by this requirement.                                             | TM-NFR-02 |
 | CBR-10 | User creates/deletes a named list or assigns a task to it.                  | A task belongs to at most one list; deleting a list leaves its tasks intact and unassigned.                       | None within the approved MVP behavior.                                                                               | TM-FR-08  |
 | CBR-11 | User assigns a priority to a task.                                          | Priority is Low, Normal, or High; new tasks default to Normal.                                                    | None within the approved MVP behavior.                                                                               | TM-FR-09  |
@@ -172,7 +178,7 @@ These analyst-derived rules summarize the approved requirements below. The user 
 - **Approved requirements:** TM-FR-01 through TM-FR-10 and TM-NFR-01 through TM-NFR-05 define the approved product baseline.
 - **Traceability:** CBR-01 through CBR-14 summarize the approved requirements and their acceptance criteria; they do not add separate policy.
 - **Approval evidence:** The requester approved this baseline while accepting the product-owner and approver roles on 2026-11-13; the display name was not provided.
-- **Pre-production gates:** Anonymous task-space identity/isolation/recovery, infrastructure retention/purge, privacy-reviewed metric instrumentation, numeric performance/availability/recovery/support objectives, and technical validation of browser/accessibility support must be completed by technical/security/privacy/operations owners before general launch.
+- **Pre-production gates:** Credential lifetime/revocation, workspace isolation validation, purge timing for inaccessible workspaces, privacy-reviewed metric instrumentation, numeric performance/availability/recovery/support objectives, and technical validation of browser/accessibility support must be completed by technical/security/privacy/operations owners before general launch. Deleted-task backup retention is approved at no more than 30 days, with an independent deletion ledger applied before restored data is served.
 
 ## Quality and Operational Needs
 
@@ -190,7 +196,7 @@ These analyst-derived rules summarize the approved requirements below. The user 
 
 **TM-NFR-05: Browser and accessibility support.** The web experience supports the current and previous major versions of Chrome, Edge, Firefox, and Safari and conforms to WCAG 2.2 AA for core workflows. Technical owners validate this before general launch.
 
-Numeric performance, availability, recovery, support, and data-retention objectives are pre-production gates owned by technical, operations, and privacy leads; values must be approved before general launch.
+Numeric performance, availability, recovery, and support objectives, plus purge timing for inaccessible workspaces, are pre-production gates owned by technical, operations, and privacy leads; values must be approved before general launch. Deleted-task backup retention is separately approved at no more than 30 days with restore-ledger protection.
 
 ## Scope Boundaries
 
@@ -203,22 +209,22 @@ Numeric performance, availability, recovery, support, and data-retention objecti
 - The repository's [React and TypeScript instructions](.github/instructions/react-typescript.instructions.md) identify the browser UI technologies.
 - The repository's [ASP.NET Core instructions](.github/instructions/aspnet-core.instructions.md) identify C# and ASP.NET Core for the application/API.
 - The repository's [PostgreSQL instructions](.github/instructions/postgresql.instructions.md) identify PostgreSQL as the authoritative database.
-- These are repository technical constraints, not product approval. The referenced architecture specification is not present in this workspace; the technical owner should confirm the applicable architecture before downstream planning.
-- Technical/security owners must define and validate the anonymous task-space identity/session model, data isolation, and recovery before general launch.
+- The [Task Manager Architecture specification](task-manager-architecture.md) records the requester-approved architecture (2026-11-13); approval is not implementation authorization, and pre-production gates remain.
+- The approved access model is account-free, browser-bound, and has no pairing or recovery. Technical/security owners must validate credential lifetime/revocation and workspace isolation; privacy/operations owners must define purge timing for inaccessible workspaces before pilot.
 
 ## Assumptions, Risks, and Open Questions
 
 | Type             | Decision or gate                                                                                | Approved decision / next step                                                                                                                                                                                                      |
 | ---------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User decision    | The first release is for an individual user rather than a team.                                 | Approved: account-free individual MVP, one browser task space, no team sharing or cross-device sync. Anonymous identity/session, isolation, and recovery are technical/security pre-production gates.                              |
+| User decision    | The first release is for an individual user rather than a team.                                 | Approved: account-free individual MVP, one browser task space, no team sharing, cross-device sync, pairing, or recovery. Credential lifecycle and workspace isolation are technical/security gates; purge timing for inaccessible workspaces is a privacy/operations gate. |
 | User decision    | Which browsers and accessibility standard are required?                                         | Approved: current and previous major versions of Chrome, Edge, Firefox, and Safari; WCAG 2.2 AA for core workflows. Technical owners validate before general launch.                                                               |
 | Risk             | The proposed feature set may not match the user's actual task workflow.                         | Validate the proposed MVP with representative users before baselining scope.                                                                                                                                                       |
-| User decision    | Which task fields and organization tools are essential?                                         | Approved: named lists with at most one list per task; deleting a list leaves its tasks intact and unassigned. Priority is Low/Normal/High, default Normal. Defer tags, priority sorting, recurrence, reminders, and import/export. |
+| User decision    | Which task fields and organization tools are essential?                                         | Approved: tasks may be unassigned or belong to at most one user-created list; no default list is required, and deleting a list leaves its tasks intact and unassigned. Priority is Low/Normal/High, default Normal. Defer tags, priority sorting, recurrence, reminders, and import/export. |
 | User decision    | Should title search be case-sensitive or match partial words?                                   | Approved: case-insensitive substring matching, trimmed query whitespace, empty query clears search, and an explicit no-results state.                                                                                              |
 | User decision    | What date, timezone, and past-due semantics apply to due dates?                                 | Approved: date-only due dates; an open task is overdue when its due date is before the user's current local date. Completed tasks are not overdue.                                                                                 |
-| User decision    | Is confirmed deletion permanent or recoverable, and what retention behavior applies?            | Approved: confirmed deletion permanently removes the task from the active task space and has no restore feature. Infrastructure retention/purge is a privacy/operations pre-production gate.                                       |
+| User decision    | Is confirmed deletion permanent or recoverable, and what retention behavior applies?            | Approved: confirmed deletion immediately removes the task from the active store and has no product restore feature. Backups may retain deleted data for no more than 30 days; an independent deletion ledger prevents deleted records from reappearing after restore. Purge timing for inaccessible workspaces remains a privacy/operations pre-production gate. |
 | User decision    | What should happen when a save fails, a task is unavailable, or concurrent edits conflict?      | Approved: preserve draft and report failure/unavailability; allow retry after save failure; on conflict, show latest version and let the user reload or reapply the draft.                                                         |
-| Operational gate | What numeric performance, availability, recovery, support, and data-retention objectives apply? | Technical, operations, and privacy owners define and approve numeric targets before general launch.                                                                                                                                |
+| Operational gate | What numeric performance, availability, recovery, support, and inaccessible-workspace purge objectives apply? | Technical, operations, and privacy owners define and approve these objectives before general launch. Deleted-task backup retention is separately approved at no more than 30 days with restore-ledger protection. |
 | User decision    | What baseline and target should be used for activation, completion, and findability?            | Approved: activation is the sole primary pilot measure; establish a baseline during the pilot and set a numeric threshold before general launch. Privacy-reviewed instrumentation is a pre-production gate.                        |
 | User decision    | Are import/export or migration from another task system required?                               | User chose to defer import, export, and migration from the MVP; users enter tasks manually.                                                                                                                                        |
 | Approval record  | Who owns and approved this specification?                                                       | Requesting user approved as product owner and approver on 2026-11-13; display name was not provided.                                                                                                                               |
@@ -235,3 +241,5 @@ The requesting user approved this PRS as product owner and approver on 2026-11-1
 | 0.4     | 2026-11-13 | Proposed defaults for search, due dates, deletion, save/conflict handling, and measures; unresolved targets/ownership are tagged [NEEDS DECISION]. |
 | 0.5     | 2026-11-13 | Recorded user decisions, added named-list and priority requirements, and retained unresolved implementation/policy details as [NEEDS DECISION].    |
 | 0.6     | 2026-11-13 | Incorporated final decisions, assigned pre-production gates, and recorded requester approval of the product baseline.                              |
+| 0.7     | 2026-11-13 | Recorded account-free single-browser access without pairing/recovery, optional task-list assignment without a default list, and a 30-day maximum backup retention with deletion-ledger protection. |
+| 0.8     | 2026-11-13 | Recorded requester approval of the architecture specification while retaining separate implementation authorization and pre-production gates. |

@@ -6,15 +6,23 @@ chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
 prompt: |
   help me with the next step
 started: "2026-11-13T09:09:15.632-08:00"
-ended: "2026-11-13T09:17:30-08:00"
+ended: "2026-11-13T09:40:38.8013479-08:00"
 task_durations:
-  - task: "Reviewing approved requirements and stack guidance"
+  - task: "Reviewing requirements and selecting the architecture"
     duration: "00:01:30"
-  - task: "Comparing options and drafting architecture"
+  - task: "Drafting architecture and data-flow diagrams"
     duration: "00:05:00"
-  - task: "Documenting decisions and validating diagrams"
+  - task: "Rendering and documenting architecture"
     duration: "00:01:30"
-total_duration: "00:08:00"
+  - task: "Reviewing the documented conflicts"
+    duration: "00:01:30"
+  - task: "Confirming decisions and aligning requirements/guidance"
+    duration: "00:04:30"
+  - task: "Validating and recording the decision set"
+    duration: "00:03:30"
+  - task: "Recording architecture approval and remaining gates"
+    duration: "00:01:00"
+total_duration: "00:18:30"
 ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 source: "User request and follow-up architecture choices"
 ---
@@ -25,12 +33,12 @@ source: "User request and follow-up architecture choices"
 
 | Field | Value |
 |---|---|
-| Status | Proposal for technical/security/privacy/operations review; not implementation authorization |
-| Requirements baseline | [Task Manager PRS v0.6](task-manager-requirements.md), approved 2026-11-13 |
+| Status | Approved by requester on 2026-11-13; this is not implementation authorization |
+| Requirements baseline | [Task Manager PRS v0.7](task-manager-requirements.md), approved 2026-11-13 |
 | Architecture decision | Account-free, one browser, no pairing or recovery; small pilot with numeric operating targets TBD |
 | Scope | Architecture for the approved individual task-manager MVP |
 
-This proposal turns the approved product behavior and repository technology guidance into a reviewable architecture. Numeric service targets, retention policy, deployment provider, and several technical-document conflicts remain open. No user volumes, budget, schedule, or compliance obligations were supplied.
+The requester approved this architecture specification on 2026-11-13. This approval selects the documented architecture but does not itself authorize implementation or waive the remaining pre-production gates. The requester also confirmed the access, list, and backup-retention decisions below on 2026-11-13. Numeric service targets, orphaned-workspace purge timing, deployment provider, and other listed pre-production decisions remain open. No user volumes, budget, schedule, or compliance obligations were supplied.
 
 ## Goals and constraints
 
@@ -43,12 +51,14 @@ This proposal turns the approved product behavior and repository technology guid
 
 ### Requirements and constraints
 
-- **Approved product behavior:** The PRS v0.6 is the source of product scope and acceptance behavior. Team sharing, cross-device sync, native apps, offline writes, reminders, and import/export are excluded.
+- **Approved product behavior:** The PRS v0.7 is the source of product scope and acceptance behavior. Team sharing, cross-device sync, native apps, offline writes, reminders, and import/export are excluded.
 - **Selected technologies:** React and TypeScript for the browser UI, C# and ASP.NET Core for the application/API, and PostgreSQL as the authoritative database. Exact versions, libraries, hosting provider, and deployment topology are not selected.
-- **Access model for this proposal:** No account, pairing, or recovery. A task space is bound to the browser credential issued at first use. Losing or clearing that credential makes the task space inaccessible to its user; this consequence and the resulting orphaned-data retention policy require explicit review before pilot.
+- **Access model:** Account-free, single-browser, with no pairing or recovery. A task space is bound to its opaque browser credential. Losing or clearing it makes the task space inaccessible to the user; explain this before use and define credential lifetime and inaccessible-workspace purge before pilot.
+- **List model:** Tasks may be unassigned or belong to at most one user-created list. No default `Tasks` list is required. Deleting a list leaves its tasks intact and unassigned.
+- **Deleted-task retention:** Remove deleted tasks from the active store immediately. Backups may retain deleted records for no more than 30 days; a minimal independent deletion ledger must prevent deleted records from reappearing after restore.
 - **Operational scope:** Small pilot. Performance, availability, recovery, support, retention, and rate-limit targets remain TBD; do not infer production readiness from a pilot deployment.
 - **Accessibility and browsers:** Validate the PRS target of WCAG 2.2 AA for core workflows and current/previous major Chrome, Edge, Firefox, and Safari before general launch.
-- **Evidence boundary:** Repository instructions provide technical constraints, but some details conflict with the approved product behavior. The conflicts are listed under [Open decisions and guidance conflicts](#open-decisions-and-guidance-conflicts).
+- **Evidence boundary:** Repository instructions are aligned with the approved access, list, and retention decisions. Remaining technical and operational gates are listed under [Remaining decisions and pre-production gates](#remaining-decisions-and-pre-production-gates).
 
 ## Architecture overview
 
@@ -92,9 +102,9 @@ flowchart TB
 |---|---|---|
 | Browser client | Render accessible task/list views; collect input; manage local drafts; display loading, stale, save, conflict, and error states | React/TypeScript. Keep drafts separate from confirmed server state. Do not store credentials in JavaScript storage or create offline write queues. |
 | Same-origin API | Define typed request/response contracts and HTTP error behavior | ASP.NET Core. Prefer same-origin hosting or routing; choose controllers/minimal APIs during implementation planning. |
-| Workspace access | Provision an anonymous workspace at first use; issue and validate an opaque credential; derive workspace scope | Persist only a secure credential verifier. Return the raw credential only in a Secure, HttpOnly cookie. No pairing or recovery endpoints in this proposal. |
+| Workspace access | Provision an anonymous workspace at first use; issue and validate an opaque browser credential; derive workspace scope | Persist only a secure credential verifier. Return the raw credential only in a Secure, HttpOnly cookie. No account, pairing, credential reset, or recovery endpoints. |
 | Task feature | Create, view, edit, complete/reopen, delete, filter, search, and report overdue state | Validate title and other inputs. Use workspace-scoped reads and version-checked changes. Search titles as literal, case-insensitive substrings after trimming query whitespace. |
-| List feature | Create and delete named lists; assign a task to at most one list | Deleting a list and leaving its tasks unassigned must be one transaction. Follow the approved PRS if list rules conflict with technical guidance. |
+| List feature | Create and delete named lists; optionally assign a task to one list | Tasks may remain unassigned. Deleting a list and setting its tasks unassigned must be one transaction. |
 | Persistence boundary | Map feature operations to parameterized PostgreSQL queries and transactions | Keep SQL and data access out of UI/endpoint code. Add indexes only after the access patterns and representative workload justify them. |
 | PostgreSQL | Authoritative store for workspace, credential verifier, task, list, and version data | Enforce workspace ownership and same-workspace task/list relationships with database constraints as well as application checks. |
 
@@ -105,9 +115,9 @@ Use workspace-scoped records. A conceptual model is:
 - `Workspace`: opaque internal ID and creation metadata.
 - `WorkspaceCredential`: workspace ID, verifier, expiry/revocation state, and issuance metadata. Never store the raw cookie credential.
 - `TaskList`: workspace ID, name, and timestamps.
-- `Task`: workspace ID, optional list ID, title, description, date-only due date, priority, completion state, and monotonically changing version.
+- `Task`: workspace ID, nullable list ID, title, description, date-only due date, priority, completion state, and monotonically changing version.
 
-The optional list relationship is needed to represent the approved behavior in which deleting a list leaves its tasks intact but unassigned. Use foreign-key constraints that prevent cross-workspace references. Exact columns, uniqueness rules, indexes, migration tool, and credential expiry are implementation decisions.
+The nullable list relationship represents the approved behavior in which tasks may be unassigned and deleting a list leaves its tasks intact but unassigned. There is no default list; new tasks may be created unassigned. Use foreign-key constraints that prevent cross-workspace references. Exact columns, uniqueness rules, indexes, migration tool, and credential expiry are implementation decisions.
 
 ### Principal data flows
 
@@ -124,8 +134,8 @@ flowchart TB
   User -->|Open task manager| UI
   UI -->|First-use request without a credential| API
   API -->|Request to initialize a task space| Provision
-  Provision -->|Workspace, default Tasks list, and credential verifier| DB
-  DB -->|Committed workspace and initial-list identifiers| Provision
+  Provision -->|Workspace and credential verifier| DB
+  DB -->|Committed workspace identifier| Provision
   Provision -->|Raw credential for one-time cookie issuance| API
   API -->|Initial view and Secure, HttpOnly credential cookie| UI
   UI -->|Ready task space| User
@@ -211,8 +221,8 @@ Avoid introducing microservices, event-driven processing, background synchroniza
 - **Request protection:** Use same-origin deployment where practical, validate request origins for state-changing requests, apply CSRF defenses, and rate-limit workspace creation and data operations. Define numeric limits before pilot.
 - **Data protection:** Use TLS in transit, protect database and backup access with least privilege, and keep deployment secrets outside source control. Encrypt stored data and backups according to the selected hosting environment and reviewed policy.
 - **Task content:** Treat task text as potentially sensitive user content. Render it as text, not user-controlled HTML. Exclude content and secrets from logs, traces, and analytics.
-- **Anonymous-use consequence:** Clearing browser data or losing the browser credential makes that workspace inaccessible. There is intentionally no account, pairing, or recovery flow in this proposal. Expiry, revocation, orphaned-workspace purge, abuse controls, and user-facing disclosure must be decided before pilot.
-- **Deletion and backups:** Product deletion removes a task from the active workspace and has no restore feature. Backup retention and purge, and preventing deleted data from reappearing after restore, require an approved policy and tested restore process. The PostgreSQL guidance describes an independent deletion ledger and a 30-day backup window, while the approved PRS still leaves infrastructure retention/purge unresolved; confirm that these are approved and mutually consistent before implementation.
+- **Anonymous-use consequence:** Clearing browser data or losing the browser credential makes that workspace inaccessible. There is no account, pairing, credential reset, or recovery flow. Disclose this consequence; define credential expiry/revocation, inaccessible-workspace purge, and abuse controls before pilot.
+- **Deletion and backups:** Product deletion immediately removes a task from the active workspace and has no product restore feature. Backups may retain deleted records for no more than 30 days. Keep an independent ledger containing only opaque workspace/task identifiers and deletion times; apply it before a restored database can serve traffic, and retain ledger entries until every backup containing the deleted record has expired. Disclose this backup-retention behavior and test restore and purge procedures.
 - **Compliance:** No regulatory regime or compliance status is established by the available requirements. Determine applicability with the responsible privacy/security stakeholders.
 
 ## Deployment and operations
@@ -222,14 +232,14 @@ Avoid introducing microservices, event-driven processing, background synchroniza
 - Configure secrets outside source control. Use least-privilege application and migration database roles.
 - Apply reviewed, repeatable database migrations with compatibility and rollback planning. Application rollback does not reverse a database migration.
 - Provide readiness/health checks without revealing task data, credential state, or secrets. Emit sanitized structured operational logs.
-- Before general launch, set numeric availability/performance/support and recovery objectives, establish backup/restore procedures, test deletion-ledger reapplication if that requirement is retained, and approve retention/purge behavior.
+- Before general launch, set numeric availability/performance/support and recovery objectives, establish backup/restore procedures, test deletion-ledger reapplication, and approve inaccessible-workspace purge behavior.
 - Review privacy implications before instrumenting the primary pilot measure, first-task activation. Collect only the approved event data needed to compute it.
 
 ## Implementation roadmap
 
 | Phase | Scope | Validation gate |
 |---|---|---|
-| 0. Architecture and policy alignment | Resolve guidance conflicts below; approve anonymous credential lifecycle, default-list behavior, purge/retention, time-zone behavior, and pilot operations scope | Product, technical, security, privacy, and operations owners record decisions; implementation authorization is explicit |
+| 0. Architecture and policy alignment | Approve credential lifecycle, inaccessible-workspace purge, time-zone behavior, and pilot operations scope | Product, technical, security, privacy, and operations owners record decisions; implementation authorization is explicit |
 | 1. Workspace access foundation | Provision a browser-bound task space, credential verifier/cookie, workspace isolation, rate limits, and safe errors | Tests prove cross-workspace access is denied, credentials are not exposed, and expiry/revocation behavior is explicit |
 | 2. Task and list vertical slices | Deliver task create/view/edit/complete/delete and list create/assign/delete with PostgreSQL transactions and version checks | Acceptance tests cover PRS behavior, list deletion/unassignment, date-only due dates, stale writes, and save failures |
 | 3. Browser workflows and accessibility | Implement filters, title search, priority, overdue indication, draft preservation, and accessible feedback | Keyboard and WCAG 2.2 AA review for core flows; cross-browser validation against the PRS target |
@@ -238,20 +248,24 @@ Avoid introducing microservices, event-driven processing, background synchroniza
 
 Owners, dates, cost, and phase duration are TBD. The phases are dependency-ordered recommendations, not estimates.
 
-## Open decisions and guidance conflicts
+## Decisions confirmed and remaining gates
 
-1. **Credential lifetime and orphaned data:** Define expiry, revocation, whether any credential-reset path is allowed, and how inaccessible workspaces are purged. The selected no-recovery model means the user cannot regain access after losing browser credential data.
-2. **Approved list behavior vs. PostgreSQL guidance:** The PRS permits tasks to become unassigned after list deletion. The PostgreSQL instruction says every task must have a list association. Update or reconcile that instruction before schema work; the proposed model makes list association optional.
-3. **No pairing/recovery vs. ASP.NET Core guidance:** The access model selected for this proposal excludes pairing and recovery, while ASP.NET Core instructions describe pairing grants and recovery controls. Reconcile those instructions before implementation; do not build pairing/recovery implicitly.
-4. **Retention and deletion ledger:** The PRS leaves infrastructure retention/purge open; PostgreSQL guidance specifies a 30-day backup window and an independent deletion ledger. Confirm the approved retention policy and restore invariant with privacy/operations owners.
-5. **Overdue time zone:** Confirm whether “user's current local date” means the browser's current time zone or a fixed workspace zone. The proposed account-free single-browser model can use the browser's local date, but a zone change may change overdue status.
-6. **Default list behavior:** PostgreSQL guidance requires a `Tasks` list at workspace creation. Confirm how that list is presented and whether it can be deleted under the approved list behavior.
-7. **Pilot deployment and targets:** Choose a hosting provider and define operational targets, rate limits, pilot size, support/monitoring ownership, and recovery objectives. Keep these TBD until owners supply evidence.
-8. **Architecture approval:** The PRS is approved as a product baseline; this architecture proposal needs technical/security/privacy/operations review and explicit approval before implementation.
+The requester confirmed these conflict resolutions on 2026-11-13; corresponding ASP.NET Core and PostgreSQL guidance and the PRS were updated:
+
+1. **Identity:** Keep account-free, one-browser access with no pairing or recovery. Retain secure opaque browser credentials and server-side workspace authorization.
+2. **Lists:** Tasks may be unassigned or belong to at most one list. Do not require or create a default `Tasks` list. Deleting a list leaves its tasks intact and unassigned.
+3. **Deletion retention:** Remove deleted tasks from the active store immediately. Cap backup retention at 30 days. Apply a minimal independent deletion ledger before restoring service, retaining ledger rows only until backups containing those records expire.
+
+Remaining pre-production decisions:
+
+- **Credential lifetime and inaccessible workspaces:** Define credential expiration/revocation and the retention/purge interval for workspaces users can no longer access. No user credential reset is available.
+- **Overdue time zone:** Confirm whether “user's current local date” means the browser's current time zone or a fixed workspace zone. The single-browser design could use the browser's local date, but a zone change may change overdue status.
+- **Pilot operations:** Choose a hosting provider and define numeric operational targets, rate limits, pilot size, and support/monitoring ownership.
+- **Architecture approval:** The requester approved this architecture specification on 2026-11-13. Implementation authorization must be recorded separately; the remaining pre-production decisions and gates still apply.
 
 ## Assumptions
 
-- The approved PRS v0.6 remains the product source of truth.
-- The user's follow-up choice confirms the access model for this proposal but does not silently revise the PRS or technical instructions.
+- The approved PRS v0.7 remains the product source of truth.
+- The requester confirmed the access, list, and backup-retention decisions above; those decisions are recorded in the PRS and aligned stack instructions.
 - The pilot remains a small, individual-user web application without team, cross-device, or offline behavior.
 - Numeric service, abuse, retention, and recovery targets are intentionally not invented.

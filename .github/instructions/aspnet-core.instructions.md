@@ -15,12 +15,17 @@ source: "user request"
 name: "aspnet-core"
 description: "Use when building or changing the task-manager C# and ASP.NET Core backend, including API endpoints, authorization, persistence boundaries, and errors."
 applyTo: "**/*.cs"
-version: "1.0.0"
+version: "1.1.0"
 author: "jMM-at-CODETraining"
 tags: ["aspnet-core", "csharp", "backend", "task-manager"]
 owner: "Development Team"
-reviewedDate: "2026-11-12"
-nextReview: "2027-02-12"
+reviewedDate: "2026-11-13"
+nextReview: "2027-02-13"
+revisions:
+  - chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
+    date: "2026-11-13"
+    change: "Aligned access guidance with account-free single-browser/no-recovery; removed pairing/recovery requirements and the required default list."
+    ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 ---
 
 # ASP.NET Core Instructions
@@ -44,15 +49,15 @@ Apply these rules to the task-manager backend. The approved stack is C# and ASP.
 - Keep endpoint handlers, validation, application behavior, and persistence responsibilities clear. Reuse shared authorization, validation, persistence, and error-handling mechanisms rather than duplicating them.
 - Use typed request/response contracts and explicit validation. Return consistent, non-sensitive errors for validation failures, unauthenticated access, unavailable resources, version conflicts, rate limits, and service failures.
 - Choose controllers or minimal APIs only after implementation planning; do not introduce a new architectural pattern or library by assumption.
-- Keep workspace scope derived from the verified device credential. A route, query parameter, or request body workspace ID is never authorization.
+- Keep workspace scope derived from the verified browser credential. A route, query parameter, or request body workspace ID is never authorization.
 
 ## Access and Security
 
-- Authenticate each device using its distinct, opaque credential. Store only a secure verifier server-side; never log or return raw credentials after issuance.
-- Enforce expiry and revocation on every protected request. Use the approved Secure, HttpOnly cookie policy, appropriate SameSite behavior, CSRF defenses, and origin checks for state-changing requests.
-- Make pairing grants short-lived and single-use; verify issuer authorization and consume a grant atomically with device issuance. Do not consume grants on link fetch.
-- Rate-limit workspace creation, pairing, recovery, and task read/write endpoints independently; numeric limits are open decisions and must be documented and tested before pilot launch.
-- Never log task content, device credentials, recovery secrets, pairing payloads, or sensitive request bodies/URLs. Do not expose stack traces, secret values, or cross-workspace existence in client errors.
+- The approved MVP is account-free and bound to one browser. Issue one distinct, opaque browser credential for its task space; do not implement accounts, device pairing, credential reset, or user recovery unless the product baseline changes.
+- Store only a secure credential verifier server-side; never log or return the raw credential after cookie issuance. Use the approved Secure, HttpOnly cookie policy and appropriate SameSite behavior.
+- Enforce credential validity and workspace scoping on every protected request. Define expiry and revocation behavior before pilot and explain that losing or expiring the credential makes the task space inaccessible; do not silently create a replacement workspace after an authentication failure.
+- Apply CSRF defenses and origin checks for state-changing requests. Rate-limit workspace creation and task read/write endpoints independently; numeric limits are open decisions and must be documented and tested before pilot launch.
+- Never log task content, browser credentials, or sensitive request bodies/URLs. Do not expose stack traces, secret values, or cross-workspace existence in client errors.
 - Keep deployment secrets outside source control. Use explicit environment configuration and least-privilege database access.
 
 ## Persistence and Concurrency
@@ -60,32 +65,32 @@ Apply these rules to the task-manager backend. The approved stack is C# and ASP.
 - Treat PostgreSQL as the authoritative store. Use workspace-scoped reads and writes and enforce same-workspace task/list ownership in application logic and database constraints.
 - Commit state changes and version increments atomically. Use conditional version checks for updates and removals; report stale writes as explicit conflicts rather than overwriting newer data.
 - Make creates and other non-idempotent operations safe against ambiguous responses and retries using stable operation identifiers or an approved equivalent.
-- Ensure workspace creation and its required default Tasks list succeed or fail together.
-- Keep date-only due dates distinct from UTC instants. Compute calendar behavior using the configured workspace time zone, not a server or browser local default.
+- Ensure workspace creation and any required initial records succeed or fail together. The current product baseline does not require a default task list.
+- Keep date-only due dates distinct from UTC instants. Apply the product-approved local-date rule; do not silently substitute the server date. Resolve browser-versus-workspace time zone before implementing overdue behavior.
 - Keep the deletion ledger independent from the restored application database. Do not expose restored data until ledger reapplication and access-state reconciliation succeed; define consistency and failure behavior before implementing restore.
 
 ## Operations and Verification
 
 - Provide health/readiness behavior without disclosing secrets or task data. Emit sanitized structured logs and useful operational signals.
 - Use transactions and migrations appropriate to the selected provider and library. Make deployment and rollback compatible with schema evolution; never assume application rollback reverses a database migration.
-- Add unit and integration coverage for validation, workspace isolation, authorization expiry/revocation, pairing replay/expiry, recovery rotation, version conflicts, retry behavior, and explicit error responses.
+- Add unit and integration coverage for validation, workspace isolation, credential expiry/revocation, version conflicts, retry behavior, and explicit error responses. Do not add pairing/recovery tests unless those capabilities are approved in a future product change.
 - Test restore and deletion-ledger failure paths before pilot readiness; keep the service unavailable if required safeguards cannot be applied.
 
 ## Verification Checklist
 
 - [ ] Protected requests enforce credential validity and workspace scoping on every request.
 - [ ] Concurrent stale updates cannot overwrite or recreate newer/deleted records.
-- [ ] Pairing, recovery, and task failures return explicit safe outcomes.
-- [ ] Logs and errors exclude credentials, recovery material, and task content.
+- [ ] Browser-credential and task failures return explicit safe outcomes without silently provisioning a replacement workspace.
+- [ ] Logs and errors exclude credentials and task content.
 - [ ] Database writes preserve all required workspace/list/task invariants.
 - [ ] Restore cannot serve data before deletion-ledger and access-state checks complete.
 - [ ] No unselected library, hosting provider, or numeric operational target is assumed.
 
 ## Summary
 
-Keep ASP.NET Core as a secure modular monolith: enforce server-side device authorization and workspace isolation, commit versioned mutations atomically, and make all failure states explicit and testable.
+Keep ASP.NET Core as a secure modular monolith: enforce server-side browser-credential authorization and workspace isolation, commit versioned mutations atomically, and make all failure states explicit and testable.
 
 **Related Instructions**: [React/TypeScript](react-typescript.instructions.md), [PostgreSQL](postgresql.instructions.md)
-**Document Version**: 1.0.0
-**Last Updated**: 2026-11-12
+**Document Version**: 1.1.0
+**Last Updated**: 2026-11-13
 **Maintainer**: Development Team
