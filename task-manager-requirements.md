@@ -6,7 +6,7 @@ chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
 prompt: |
   create a product requirements specification a task manager
 started: "2026-11-13T08:12:22.1498043-08:00"
-ended: "2026-11-13T08:59:02.8392133-08:00"
+ended: "2026-11-13T09:09:00.4955761-08:00"
 task_durations:
   - task: "Repository and product-context review"
     duration: "00:00:35"
@@ -42,7 +42,9 @@ task_durations:
     duration: "00:01:50"
   - task: "Chat logging and journal verification"
     duration: "00:01:26"
-total_duration: "00:30:39"
+  - task: "Approval decision recording and final verification"
+    duration: "00:00:51"
+total_duration: "00:31:30"
 ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 source: "user request"
 ---
@@ -51,15 +53,15 @@ source: "user request"
 
 ## Document Control
 
-| Field         | Value                                                              |
-| ------------- | ------------------------------------------------------------------ |
-| Status        | Draft for review; user decisions recorded; formal approval pending |
-| Version       | 0.5                                                                |
-| Date          | 2026-11-13                                                         |
-| Product owner | Requesting user (display name not provided)                        |
-| Approver      | Requesting user (display name not provided)                        |
+| Field         | Value                                                            |
+| ------------- | ---------------------------------------------------------------- |
+| Date          | 2026-11-13                                                       |
+| Product owner | Requesting user (display name not provided)                      |
+| Approver      | Requesting user (display name not provided)                      |
+| Status        | Approved baseline; pre-production technical/privacy gates remain |
+| Version       | 0.6                                                              |
 
-This document proposes an initial product scope from the request to specify a task manager. No user research, stakeholder brief, or business goals were supplied. Assumptions and proposed requirements below need review before becoming a product baseline.
+This document records the approved initial product baseline based on the request and product-owner decisions. No user research, stakeholder brief, or business goals were supplied; the audience and workflow assumptions should be validated during the pilot.
 
 ## Problem and Opportunity
 
@@ -67,13 +69,13 @@ This document proposes an initial product scope from the request to specify a ta
 
 ## Goals and Success Measures
 
-The proposed product should let a user:
+The approved product baseline enables a user to:
 
 - Capture and maintain tasks without losing previously saved work.
 - Organize and locate tasks that need attention.
 - Mark work complete and distinguish it from unfinished work.
 
-Candidate measures for product review:
+Primary pilot success measure:
 
 | Measure               | Definition                                                                    | Target / status                                                                                   |
 | --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -93,9 +95,9 @@ First-task activation is the only selected primary pilot measure. Completion and
 
 Team collaboration, delegated work, and multiple account or workspace roles are not established needs.
 
-## Proposed MVP Requirements
+## Approved MVP Requirements
 
-The following requirements are proposals for review, not approved commitments. Acceptance criteria describe the expected product behavior if the proposal is accepted.
+The following requirements define the approved product baseline. Acceptance criteria describe the expected product behavior.
 
 ### Task Capture and Maintenance
 
@@ -117,7 +119,7 @@ The following requirements are proposals for review, not approved commitments. A
 
 **TM-FR-05: Delete a task.** The user can permanently remove a task from the active task space after confirmation. The MVP does not provide a restore feature.
 
-**Acceptance:** After the user confirms deletion, the task no longer appears in task views and cannot be restored through the product. If deletion is canceled, the task remains available. Infrastructure retention or purge timing is [NEEDS DECISION].
+**Acceptance:** After the user confirms deletion, the task no longer appears in task views and cannot be restored through the product. If deletion is canceled, the task remains available. Infrastructure retention or purge timing is a privacy/operations pre-production gate.
 
 ### Organization and Discovery
 
@@ -129,48 +131,48 @@ The following requirements are proposals for review, not approved commitments. A
 
 **Acceptance:** Search is case-insensitive and matches a substring of the task title after surrounding query whitespace is trimmed. An empty query clears the search, and a query with no matches shows an explicit no-results state.
 
-**TM-FR-08: Organize tasks in named lists.** The user can create a named list and assign a task to a list.
+**TM-FR-08: Organize tasks in named lists.** The user can create a named list, assign a task to at most one list, and delete a list.
 
-**Acceptance:** A created list is available for task assignment. An assigned task appears in that list and remains available in the all-tasks view. Whether tasks may belong to multiple lists and what happens when a list is deleted are [NEEDS DECISION].
+**Acceptance:** A task assigned to a list appears in that list and remains available in the all-tasks view. Deleting a list removes the list and leaves its tasks intact but unassigned.
 
 **TM-FR-09: Set task priority.** The user can assign a priority to a task.
 
-**Acceptance:** The selected priority is shown with the task and remains saved after a refresh. A proposed low/normal/high scale with normal as the default requires confirmation: [NEEDS DECISION]. Priority sorting is not included in this MVP.
+**Acceptance:** Priority is Low, Normal, or High; a new task defaults to Normal. The selected value is shown with the task and remains saved after a refresh. Priority sorting is not included in this MVP.
 
 **TM-FR-10: Identify overdue tasks.** An open task is overdue when its date-only due date is earlier than the user's current local date. A completed task is not marked overdue.
 
 **Acceptance:** Given an open task due before the user's current local date, the task is identified as overdue. A task due today, due in the future, or already completed is not identified as overdue.
 
-Tags, priority sorting, recurring tasks, reminders, import/export, and list deletion are not included in this proposed MVP unless approved later.
+Tags, priority sorting, recurring tasks, reminders, and import/export are not included in this baseline.
 
-## Candidate Business Rules and Event Outcomes
+## Business Rules and Event Outcomes
 
-These analyst-derived rules summarize the proposed requirements below. They are candidates for domain-expert review, not approved business policy. The user is the assumed business actor; system behavior is inferred from the acceptance criteria.
+These analyst-derived rules summarize the approved requirements below. The user is the assumed business actor; system behavior is traced to the acceptance criteria and does not add policy beyond the approved baseline.
 
-| ID     | Actor and trigger                                                           | Candidate outcome                                                                                                | Explicit exception or unresolved behavior                                                             | Source    |
-| ------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------- |
-| CBR-01 | User submits a new task.                                                    | A task is created with a non-empty title; description and date-only due date are optional.                       | Empty or whitespace-only title is rejected with corrective feedback.                                  | TM-FR-01  |
-| CBR-02 | User saves a task edit.                                                     | Title, description, and due date can be changed.                                                                 | An empty title is rejected and the prior title is retained; other validation behavior is unspecified. | TM-FR-03  |
-| CBR-03 | User opens the task view.                                                   | Each saved task shows its title and completion state, plus any saved due date.                                   | Empty-view behavior is unspecified.                                                                   | TM-FR-02  |
-| CBR-04 | User marks a task complete or reopens it.                                   | The task state changes and remains saved after navigating away and returning.                                    | Failure handling is unspecified.                                                                      | TM-FR-04  |
-| CBR-05 | User requests deletion and confirms or cancels.                             | Confirmation permanently removes the task from the active task space; cancellation leaves it available.          | The product provides no restore feature; infrastructure retention/purge timing is [NEEDS DECISION].   | TM-FR-05  |
-| CBR-06 | User selects an open, completed, or all-tasks filter.                       | Only tasks in the selected state, or both states, are shown.                                                     | Empty-filter behavior is unspecified.                                                                 | TM-FR-06  |
-| CBR-07 | User searches by title.                                                     | Case-insensitive substring matches are returned after query whitespace is trimmed; an empty query clears search. | No-results state is explicit.                                                                         | TM-FR-07  |
-| CBR-08 | User refreshes or returns to the same task space after a successful change. | Create, edit, completion, and deletion outcomes remain consistent.                                               | How the same task space is identified and recovered remains [NEEDS DECISION].                         | TM-NFR-01 |
-| CBR-09 | User completes a core workflow using a keyboard.                            | Core workflows are operable without pointer input and keyboard focus is visible.                                 | Assistive-technology conformance is not established by this requirement.                              | TM-NFR-02 |
-| CBR-10 | User creates a named list and assigns a task to it.                         | The task appears in the named list and remains available in the all-tasks view.                                  | Multi-list membership and list-deletion behavior are [NEEDS DECISION].                                | TM-FR-08  |
-| CBR-11 | User assigns a priority to a task.                                          | The chosen priority is displayed and saved.                                                                      | Proposed levels and default require confirmation: [NEEDS DECISION].                                   | TM-FR-09  |
-| CBR-12 | User views a task with a due date.                                          | An open task past its due date in the user's local date is overdue; a completed task is not.                     | Locale display conventions remain [NEEDS DECISION].                                                   | TM-FR-10  |
-| CBR-13 | A task save fails.                                                          | The system preserves unsaved input, reports failure, and allows retry.                                           | Exact unavailable-task and recovery details are [NEEDS DECISION].                                     | TM-NFR-03 |
-| CBR-14 | A task update conflicts with a newer saved change.                          | The system does not silently overwrite the conflicting change.                                                   | The conflict-review and resolution flow is [NEEDS DECISION].                                          | TM-NFR-04 |
+| ID     | Actor and trigger                                                           | Approved outcome                                                                                                  | Explicit exception or unresolved behavior                                                                            | Source    |
+| ------ | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------- |
+| CBR-01 | User submits a new task.                                                    | A task is created with a non-empty title; description and date-only due date are optional.                        | Empty or whitespace-only title is rejected with corrective feedback.                                                 | TM-FR-01  |
+| CBR-02 | User saves a task edit.                                                     | Title, description, and due date can be changed.                                                                  | An empty title is rejected and the prior title is retained; other validation behavior is unspecified.                | TM-FR-03  |
+| CBR-03 | User opens the task view.                                                   | Each saved task shows its title and completion state, plus any saved due date.                                    | Empty-view behavior is unspecified.                                                                                  | TM-FR-02  |
+| CBR-04 | User marks a task complete or reopens it.                                   | The task state changes and remains saved after navigating away and returning.                                     | Failure handling is unspecified.                                                                                     | TM-FR-04  |
+| CBR-05 | User requests deletion and confirms or cancels.                             | Confirmation permanently removes the task from the active task space; cancellation leaves it available.           | The product provides no restore feature; infrastructure retention/purge is a pre-production privacy/operations gate. | TM-FR-05  |
+| CBR-06 | User selects an open, completed, or all-tasks filter.                       | Only tasks in the selected state, or both states, are shown.                                                      | Empty-filter behavior is unspecified.                                                                                | TM-FR-06  |
+| CBR-07 | User searches by title.                                                     | Case-insensitive substring matches are returned after query whitespace is trimmed; an empty query clears search.  | No-results state is explicit.                                                                                        | TM-FR-07  |
+| CBR-08 | User refreshes or returns to the same task space after a successful change. | Create, edit, completion, and deletion outcomes remain consistent.                                                | Anonymous task-space identity, isolation, and recovery are pre-production technical/security gates.                  | TM-NFR-01 |
+| CBR-09 | User completes a core workflow using a keyboard.                            | Core workflows are operable without pointer input and keyboard focus is visible.                                  | Assistive-technology conformance is not established by this requirement.                                             | TM-NFR-02 |
+| CBR-10 | User creates/deletes a named list or assigns a task to it.                  | A task belongs to at most one list; deleting a list leaves its tasks intact and unassigned.                       | None within the approved MVP behavior.                                                                               | TM-FR-08  |
+| CBR-11 | User assigns a priority to a task.                                          | Priority is Low, Normal, or High; new tasks default to Normal.                                                    | None within the approved MVP behavior.                                                                               | TM-FR-09  |
+| CBR-12 | User views a task with a due date.                                          | An open task past its due date in the user's local date is overdue; a completed task is not.                      | Locale display conventions remain [NEEDS DECISION].                                                                  | TM-FR-10  |
+| CBR-13 | A task save fails or the task becomes unavailable.                          | The system preserves the draft and reports failure or unavailability; a failed save can be retried.               | None within the approved user-visible behavior.                                                                      | TM-NFR-03 |
+| CBR-14 | A task update conflicts with a newer saved change.                          | The system preserves the draft, shows the latest saved version, and lets the user reload it or reapply the draft. | The user must choose before the draft can replace newer saved data.                                                  | TM-NFR-04 |
 
 ## Evidence Classification
 
 - **Supplied context:** The request was to specify a task manager. No user research, stakeholder brief, or business goals were supplied.
-- **Candidate requirements:** TM-FR-01 through TM-FR-10 and TM-NFR-01 through TM-NFR-04 are proposed behaviors, not verified domain policies.
-- **Analyst interpretations:** CBR-01 through CBR-14 are derived summaries of those proposed requirements and acceptance criteria.
-- **User decisions recorded:** Individual account-free use in one browser task space; named lists and task priority in the MVP; specified title-search and date-only overdue behavior; permanent task removal after confirmation; preserve-and-retry on save failure and no silent conflict overwrite; activation as the sole primary pilot measure; defer import/export; requester accepts product-owner and approver roles.
-- **Unresolved proposals:** Exact list membership/deletion and priority scale/default; browser and accessibility targets; operational service levels; measurement instrumentation, baseline, and threshold; identified approver name; and formal PRS approval.
+- **Approved requirements:** TM-FR-01 through TM-FR-10 and TM-NFR-01 through TM-NFR-05 define the approved product baseline.
+- **Traceability:** CBR-01 through CBR-14 summarize the approved requirements and their acceptance criteria; they do not add separate policy.
+- **Approval evidence:** The requester approved this baseline while accepting the product-owner and approver roles on 2026-11-13; the display name was not provided.
+- **Pre-production gates:** Anonymous task-space identity/isolation/recovery, infrastructure retention/purge, privacy-reviewed metric instrumentation, numeric performance/availability/recovery/support objectives, and technical validation of browser/accessibility support must be completed by technical/security/privacy/operations owners before general launch.
 
 ## Quality and Operational Needs
 
@@ -182,17 +184,19 @@ These analyst-derived rules summarize the proposed requirements below. They are 
 
 **Acceptance:** A tester can create, edit, search, complete, reopen, and delete tasks using keyboard navigation, without relying on pointer input.
 
-**TM-NFR-03: Failed save feedback.** If a task save fails, the system preserves the user's unsaved input, reports that the save failed, and allows a retry.
+**TM-NFR-03: Failed save and unavailable task feedback.** If a task save fails or the task becomes unavailable, the system preserves the user's draft and explains the failure or unavailability. A failed save can be retried.
 
-**TM-NFR-04: Conflict protection.** The system does not silently overwrite a newer saved task change when an edit conflict occurs. The exact user review and resolution flow is [NEEDS DECISION].
+**TM-NFR-04: Conflict protection.** The system preserves the user's draft and shows the latest saved version when an edit conflict occurs. The user can reload the latest version or reapply their draft. The system does not replace newer saved data until the user chooses to reapply.
 
-Performance, availability, recovery, supported browsers, accessibility standard conformance, data retention, and service support targets are open decisions; no thresholds were provided.
+**TM-NFR-05: Browser and accessibility support.** The web experience supports the current and previous major versions of Chrome, Edge, Firefox, and Safari and conforms to WCAG 2.2 AA for core workflows. Technical owners validate this before general launch.
+
+Numeric performance, availability, recovery, support, and data-retention objectives are pre-production gates owned by technical, operations, and privacy leads; values must be approved before general launch.
 
 ## Scope Boundaries
 
-**Included in this proposal:** Browser-based task capture, viewing, editing, completion, deletion, completion-state filtering, title search, named lists, and task priority.
+**Included in this approved baseline:** Browser-based task capture, viewing, editing, completion, deletion, completion-state filtering, title search, named lists, task priority, and overdue identification.
 
-**Not included unless approved later:** Team collaboration, task assignment, comments, file attachments, notifications, recurring schedules, external integrations, reporting, native mobile applications, and administrative workflows.
+**Not included in this baseline:** Team collaboration, task assignment, comments, file attachments, notifications, recurring schedules, external integrations, reporting, native mobile applications, and administrative workflows.
 
 ## Constraints and Dependencies
 
@@ -200,28 +204,28 @@ Performance, availability, recovery, supported browsers, accessibility standard 
 - The repository's [ASP.NET Core instructions](.github/instructions/aspnet-core.instructions.md) identify C# and ASP.NET Core for the application/API.
 - The repository's [PostgreSQL instructions](.github/instructions/postgresql.instructions.md) identify PostgreSQL as the authoritative database.
 - These are repository technical constraints, not product approval. The referenced architecture specification is not present in this workspace; the technical owner should confirm the applicable architecture before downstream planning.
-- The account, identity, and task-space model must be decided before specifying authorization and data-isolation requirements.
+- Technical/security owners must define and validate the anonymous task-space identity/session model, data isolation, and recovery before general launch.
 
 ## Assumptions, Risks, and Open Questions
 
-| Type          | Item                                                                                                     | Proposed answer / next step                                                                                                                                                                                                                                        |
-| ------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| User decision | The first release is for an individual user rather than a team.                                          | User chose an account-free individual MVP with one browser task space; no team sharing or cross-device sync. The anonymous identity/session model and data-isolation/recovery controls are [NEEDS DECISION] with the technical/security owners.                    |
-| Assumption    | A browser experience is the intended first client.                                                       | Recommend a responsive browser experience; defer native clients and offline use. Product owner to confirm device needs.                                                                                                                                            |
-| Risk          | The proposed feature set may not match the user's actual task workflow.                                  | Validate the proposed MVP with representative users before baselining scope.                                                                                                                                                                                       |
-| User decision | Which task fields and organization tools are essential?                                                  | User selected named lists and priority. Keep title required and description/due date optional; defer tags, priority sorting, recurrence, and reminders. List membership/deletion rules and priority levels/default are [NEEDS DECISION].                           |
-| User decision | Should title search be case-sensitive or match partial words?                                            | User selected case-insensitive substring matching, trimmed query whitespace, empty query clearing search, and an explicit no-results state.                                                                                                                        |
-| User decision | What date, timezone, and past-due semantics apply to due dates?                                          | User selected date-only due dates, with overdue status when an open task's due date is before the user's current local date. Display locale conventions are [NEEDS DECISION].                                                                                      |
-| User decision | Is confirmed deletion permanent or recoverable, and what retention behavior applies?                     | User selected permanent removal from the active task store after confirmation, without a restore feature. Infrastructure retention/purge requirements are [NEEDS DECISION] with privacy/operations owners.                                                         |
-| User decision | What should happen when a save fails, a task is unavailable, or concurrent edits conflict?               | User selected preserving unsaved input, showing failure and allowing retry, and avoiding silent overwrite. Exact behavior for unavailable tasks and the conflict-review flow are [NEEDS DECISION] with product/technical owners.                                   |
-| Open question | What browsers, accessibility standard, performance, availability, recovery, and retention targets apply? | Recommend current and previous major versions of Chrome, Edge, Firefox, and Safari, and WCAG 2.2 AA for core workflows. Defer offline support. Numeric performance, availability, recovery, retention, and support targets are [NEEDS DECISION] before production. |
-| User decision | What baseline and target should be used for activation, completion, and findability?                     | User selected activation as the sole primary pilot measure. Numeric target, baseline, instrumentation, and privacy review are [NEEDS DECISION] before launch.                                                                                                      |
-| User decision | Are import/export or migration from another task system required?                                        | User chose to defer import, export, and migration from the MVP; users enter tasks manually.                                                                                                                                                                        |
-| User decision | Who owns product decisions and who approves this specification?                                          | User accepted both product-owner and approver roles. Display name is not provided; formal approval of this PRS remains pending.                                                                                                                                    |
+| Type             | Decision or gate                                                                                | Approved decision / next step                                                                                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User decision    | The first release is for an individual user rather than a team.                                 | Approved: account-free individual MVP, one browser task space, no team sharing or cross-device sync. Anonymous identity/session, isolation, and recovery are technical/security pre-production gates.                              |
+| User decision    | Which browsers and accessibility standard are required?                                         | Approved: current and previous major versions of Chrome, Edge, Firefox, and Safari; WCAG 2.2 AA for core workflows. Technical owners validate before general launch.                                                               |
+| Risk             | The proposed feature set may not match the user's actual task workflow.                         | Validate the proposed MVP with representative users before baselining scope.                                                                                                                                                       |
+| User decision    | Which task fields and organization tools are essential?                                         | Approved: named lists with at most one list per task; deleting a list leaves its tasks intact and unassigned. Priority is Low/Normal/High, default Normal. Defer tags, priority sorting, recurrence, reminders, and import/export. |
+| User decision    | Should title search be case-sensitive or match partial words?                                   | Approved: case-insensitive substring matching, trimmed query whitespace, empty query clears search, and an explicit no-results state.                                                                                              |
+| User decision    | What date, timezone, and past-due semantics apply to due dates?                                 | Approved: date-only due dates; an open task is overdue when its due date is before the user's current local date. Completed tasks are not overdue.                                                                                 |
+| User decision    | Is confirmed deletion permanent or recoverable, and what retention behavior applies?            | Approved: confirmed deletion permanently removes the task from the active task space and has no restore feature. Infrastructure retention/purge is a privacy/operations pre-production gate.                                       |
+| User decision    | What should happen when a save fails, a task is unavailable, or concurrent edits conflict?      | Approved: preserve draft and report failure/unavailability; allow retry after save failure; on conflict, show latest version and let the user reload or reapply the draft.                                                         |
+| Operational gate | What numeric performance, availability, recovery, support, and data-retention objectives apply? | Technical, operations, and privacy owners define and approve numeric targets before general launch.                                                                                                                                |
+| User decision    | What baseline and target should be used for activation, completion, and findability?            | Approved: activation is the sole primary pilot measure; establish a baseline during the pilot and set a numeric threshold before general launch. Privacy-reviewed instrumentation is a pre-production gate.                        |
+| User decision    | Are import/export or migration from another task system required?                               | User chose to defer import, export, and migration from the MVP; users enter tasks manually.                                                                                                                                        |
+| Approval record  | Who owns and approved this specification?                                                       | Requesting user approved as product owner and approver on 2026-11-13; display name was not provided.                                                                                                                               |
 
 ## Approval and Change History
 
-No approval or implementation authorization is recorded. This draft becomes a baseline only after the accountable product owner resolves material open questions, confirms scope and measures, and records approval.
+The requesting user approved this PRS as product owner and approver on 2026-11-13. This approval establishes the product baseline; it does not waive the pre-production technical, security, privacy, accessibility, or operational gates recorded above.
 
 | Version | Date       | Change                                                                                                                                             |
 | ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -230,3 +234,4 @@ No approval or implementation authorization is recorded. This draft becomes a ba
 | 0.3     | 2026-11-13 | Added candidate business-rule traceability, evidence classification, missing decisions, and corrected the current version.                         |
 | 0.4     | 2026-11-13 | Proposed defaults for search, due dates, deletion, save/conflict handling, and measures; unresolved targets/ownership are tagged [NEEDS DECISION]. |
 | 0.5     | 2026-11-13 | Recorded user decisions, added named-list and priority requirements, and retained unresolved implementation/policy details as [NEEDS DECISION].    |
+| 0.6     | 2026-11-13 | Incorporated final decisions, assigned pre-production gates, and recorded requester approval of the product baseline.                              |
