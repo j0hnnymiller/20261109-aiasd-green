@@ -43,6 +43,14 @@ revisions:
     date: "2026-11-13"
     change: "Added the S01 application scaffold, local verification instructions, implementation decisions, and security-review gates."
     ai_log: "ai-logs/2026/11/13/d45afcf0-3a5c-43c0-a5f9-91947ac159c3/conversation.md"
+  - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
+    date: "2026-11-13"
+    change: "Recorded explicit Copilot implementation authorization through GitHub issue #2; independent technical/security review and pilot gates remain."
+    ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
+  - chat_id: "02051eeb-6a3e-4203-977d-fcff87be0ec9"
+    date: "2026-11-13"
+    change: "Linked the engineering instructions updated to address cross-tab provisioning, connection-pool compensation, and regression-test assertions."
+    ai_log: "ai-logs/2026/11/13/02051eeb-6a3e-4203-977d-fcff87be0ec9/conversation.md"
 ---
 
 # Task Manager
@@ -133,3 +141,10 @@ The API requires `ConnectionStrings:TaskManager`, `Security:AllowedOrigin`, and 
 - This issue does not authorize production deployment. Request independent technical/security review before merge; automated tests and CodeQL do not replace that review.
 
 The acceptance-criterion test mapping, execution evidence, and remaining review checks are recorded in the [S01 specification](specs/task-manager/S01-provision-browser-task-space.spec.md).
+- [S01: Provision and Access a Browser Task Space](specs/task-manager/S01-provision-browser-task-space.spec.md) (approved by requester; Copilot implementation authorized through [issue #2](https://github.com/j0hnnymiller/20261109-aiasd-green/issues/2); independent technical/security review and pilot gates remain)
+
+## Engineering Guidance
+
+- [React and TypeScript Instructions](.github/instructions/react-typescript.instructions.md)
+- [ASP.NET Core Instructions](.github/instructions/aspnet-core.instructions.md)
+- [Test-Driven Development Instructions](.github/instructions/test-driven-development.instructions.md)

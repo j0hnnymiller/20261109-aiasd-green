@@ -25,13 +25,21 @@ revisions:
     date: "2026-11-13"
     change: "Implemented and verified S01 while preserving the independent technical/security review and pre-pilot gates."
     ai_log: "ai-logs/2026/11/13/d45afcf0-3a5c-43c0-a5f9-91947ac159c3/conversation.md"
+  - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
+    date: "2026-11-13"
+    change: "Recorded explicit Copilot implementation authorization through GitHub issue #2; retained independent technical/security review and pilot-readiness gates."
+    ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
+  - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
+    date: "2026-11-13"
+    change: "Recorded Copilot's draft WIP pull request #3 as implementation in progress; tests and independent review remain unverified."
+    ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
 ---
 
 # S01: Provision and Access a Browser Task Space
 
 - Status: Approved
-- Implementation evidence: Code and focused verification are recorded; independent technical/security review remains required before merge.
-- Approval: Product owner (requester), 2026-11-13. Approval does not grant implementation authorization.
+- Approval: Product owner (requester), 2026-11-13.
+- Implementation authorization: The requester explicitly authorized Copilot to implement S01 through GitHub issue #2 on 2026-11-13. This authorizes S01 implementation only; independent technical/security review remains required before merge or deployment, and pilot gates remain open.
 - Owner/reviewer: Product owner (requester); technical/security reviewer and privacy/operations owners to be assigned
 - Sources:
   - [Task Manager PRS](../../task-manager-requirements.md): approved account-free access decision, TM-NFR-01, and CBR-08
@@ -63,20 +71,19 @@ An individual can initialize and revisit one task space in a browser, while the 
 
 ## Context and dependencies
 
-- Existing implementation and conventions: The repository began with documentation only. S01 now uses a .NET 10 ASP.NET Core minimal API, React 19.3.1/TypeScript 7.0.2/Vite 8.3.8, Npgsql 10.0.3, transactional SQL migration scripts applied with `psql`, xUnit, and Playwright 1.65.0. The hosting provider remains unselected.
-- Prerequisites: No prior feature slice. Issue assignment on 2026-11-13 explicitly authorized this implementation only; independent technical/security review remains required before merge. The architecture source reference is aligned to PRS v0.8.
+- Existing implementation and conventions: The repository currently contains product/architecture/roadmap documentation, instructions, and chat records; no application source, solution/project, package manifest, or test project was found. Approved stack direction is React/TypeScript, ASP.NET Core, and PostgreSQL. Exact versions, API style, data-access, migration, test, and hosting tools are unselected.
+- Prerequisites: Phase 0 of the [roadmap](../../task-manager-implementation-roadmap.md#phase-plan); no prior feature slice. S01 implementation is authorized through GitHub issue #2. Select compatible tooling and API/data/migration/test approaches before use. Complete independent technical/security review of the decisions below before merge or deployment; do not make unsupported policy choices. The architecture source reference is aligned to PRS v0.8.
 - Environment: Use isolated development/test configuration and disposable test data. Workspace-isolation checks require a real PostgreSQL integration environment; mocks alone do not satisfy them. Never use pilot or production data for development/test.
-- Assumptions: The requester-approved account-free, single-browser, no-pairing/no-recovery model and the architecture's React/ASP.NET Core/PostgreSQL direction remain authoritative. The requester selected a persistent Secure, HttpOnly cookie with a 30-day absolute expiry and no user reset/recovery. Same-origin delivery is preferred by the architecture; the implemented SameSite, Origin, CSRF, activation, and retry choices require independent security review before merge.
+- Assumptions: The requester-approved account-free, single-browser, no-pairing/no-recovery model and the architecture's React/ASP.NET Core/PostgreSQL direction remain authoritative. The requester selected a persistent Secure, HttpOnly cookie with a 30-day absolute expiry and no user reset/recovery; independent technical/security review is still required before merge or deployment. Same-origin delivery is preferred by the architecture; SameSite, origin, and CSRF controls require security review.
 - Recorded product decisions and operational gates:
   1. After showing the no-recovery disclosure, require a separate explicit "Create new task space" action. A missing, invalid, or expired credential never silently creates a replacement space.
-  2. Use a persistent Secure, HttpOnly cookie with a 30-day absolute expiry. Reject expired credentials; there is no user reset/recovery. Revocation of an activated credential must use an approved operations procedure; duplicate/retry compensation applies only to unconfirmed initialization credentials and requires security review.
+  2. Use a persistent Secure, HttpOnly cookie with a 30-day absolute expiry. Reject expired credentials; there is no user reset/recovery. Server-side revocation must use an approved operations procedure. These choices require technical/security validation before merge or deployment.
   3. S01 includes configurable provisioning/protected-request abuse controls and safe outcomes. Numeric rate-limit values are a pre-pilot gate, not a blocker to S01 specification review.
   4. Purge ownership and timing for inaccessible workspaces are a pre-pilot privacy/operations gate, not an S01 implementation behavior.
-- Remaining review gates:
-  1. Obtain independent technical/security approval for the 30-day credential lifecycle, SameSite `Strict`, exact-Origin/CSRF policy, and the UUIDv4 initialization-key/confirmation/cancellation behavior before merge.
-  2. Confirm the operations procedure for revoking activated credentials before pilot. No user reset/recovery or application revocation endpoint exists.
-  3. Approve numeric abuse limits and assign an owner/timing for inaccessible-workspace purge before pilot.
-  4. Decide trusted-proxy/forwarded-IP handling and production TLS/origin configuration before deployment. No production deployment is authorized.
+- Implementation and review decisions:
+  1. Assign independent technical/security reviewers to validate credential expiry/revocation, cookie SameSite, origin/CSRF controls, and the initialization/retry design before merge or deployment.
+  2. Document a server-side idempotency/correlation design for concurrent first-use requests and ambiguous retries, then obtain review before merge. The mechanism must not use a client-supplied workspace identifier or treat a correlation value as authorization.
+  3. Select compatible versions and exact API, persistence, migration, and test approaches before use. The repository has no application or test project, so executable commands must be established as part of implementation.
 
 ## Behavior and contracts
 
@@ -92,7 +99,7 @@ An individual can initialize and revisit one task space in a browser, while the 
   - Apply technical/security-approved cookie SameSite settings, origin checks, and CSRF protection to state-changing requests, including initialization. Abuse controls are configurable and return explicit safe outcomes; numeric limits are approved before pilot. HTTP/API shapes remain implementation decisions.
 - State and integrations:
   - Persist a workspace and verifier atomically; persist no raw credential. Do not create a default list or any task data as part of this slice.
-  - Prevent credential verifier records or workspace scope from being used to access another workspace. Repeated or concurrent initialization requests for one flow must not create unintended duplicate or orphaned spaces. Review the server-side correlation/idempotency mechanism before implementation; it is not authorization.
+  - Prevent credential verifier records or workspace scope from being used to access another workspace. Repeated or concurrent initialization requests for one flow must not create unintended duplicate or orphaned spaces. Document the server-side correlation/idempotency mechanism and obtain review before merge; it is not authorization.
   - Emit only sanitized operational signals needed to observe provisioning, rejection, and abuse-limit outcomes; never record credential material or user task content.
 - Compatibility: No task/list behavior or public API exists in this documentation-only repository. Future protected feature operations must use the same validated, server-derived workspace boundary; no client-supplied workspace scope is trusted.
 - Migration, observability, and rollback: A reviewed, repeatable migration is required for workspace and verifier state. Provisioning must be transactional. Plan schema compatibility and rollback separately; application rollback does not reverse a database migration. Operational signals must remain sanitized. Exact schema, migration tool, and rollback procedure are not selected.
@@ -140,7 +147,7 @@ The exact setup commands and implementation choices are also documented in the r
 3. Use a second isolated profile to initialize a distinct space, then run the approved integration tests to verify neither profile can read or mutate the other's workspace.
 4. Remove or invalidate a test credential and verify the protected flow is explicit and does not silently replace the inaccessible space. Do not use production credentials or data.
 
-- Completion evidence: Focused API, browser, and real-PostgreSQL evidence mapped to AC-001 through AC-007 is recorded above. Independent technical/security review of SameSite, Origin/CSRF, correlation/retry compensation, and sanitized operational signals remains required before merge. Before pilot, record numeric abuse limits and inaccessible-workspace purge owner/timing.
-- Execution evidence: See the command and result records above.
+- Completion evidence: Technical/security review of the credential, cookie, CSRF/origin, and correlation decisions; focused tests and real-PostgreSQL isolation evidence mapped to AC-001 through AC-007; sanitized security review; exact test commands and working directory. These results remain pending. Before pilot, record numeric abuse limits and inaccessible-workspace purge owner/timing.
+- Execution evidence: Copilot opened draft [WIP pull request #3](https://github.com/j0hnnymiller/20261109-aiasd-green/pull/3) from issue #2 on 2026-11-13; implementation is in progress. Test results and independent technical/security review have not been verified.
 - Risks: Credential loss or expiry is unrecoverable; incorrect first-use behavior can mislead users or create unintended workspaces; workspace isolation failure can expose another anonymous user's data. The 30-day lifetime is the requester's selected policy pending technical/security validation.
-- Next dependency/handoff: Request independent technical/security review before merge. Resolve forwarded-IP handling, numeric abuse limits, and inaccessible-workspace purge ownership/timing before pilot. No production deployment is authorized.
+- Next dependency/handoff: Review draft pull request #3 against AC-001 through AC-007 and verify its tests. Complete independent technical/security review before merge or deployment. Before pilot, record numeric abuse limits and inaccessible-workspace purge owner/timing. This authorization does not extend to downstream slices or production deployment.
