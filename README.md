@@ -24,4 +24,5 @@ Welcome!
 
 ## Product
 
-- [Task Manager Product Requirements Specification](task-manager-requirements.md) (draft for review)
+- [Task Manager Product Requirements Specification](task-manager-requirements.md) (approved baseline, v0.6)
+- [Task Manager Architecture](task-manager-architecture.md) (proposal for review; not implementation authorization)
