@@ -8,7 +8,7 @@ const initializationKeyName = 'taskspace-initialization-key'
 
 function clearInitializationKey() {
   try {
-    sessionStorage.removeItem(initializationKeyName)
+    localStorage.removeItem(initializationKeyName)
   } catch {
     return
   }
@@ -110,43 +110,56 @@ function App() {
     setBusy(true)
     setMessage('')
 
-    let initializationKey: string
     try {
-      initializationKey = sessionStorage.getItem(initializationKeyName) ?? crypto.randomUUID()
-      sessionStorage.setItem(initializationKeyName, initializationKey)
-    } catch {
-      setMessage('This browser cannot keep the temporary setup reference needed to retry safely. Enable session storage and try again.')
-      setBusy(false)
-      return
-    }
+      if (!navigator.locks) {
+        setMessage('This browser cannot safely coordinate task-space setup across tabs. Try a supported browser.')
+        return
+      }
 
-    try {
-      const response = await fetch('/api/workspaces', {
-        method: 'POST',
-        cache: 'no-store',
-        credentials: 'same-origin',
-        headers: { 'X-Initialization-Key': initializationKey },
+      await navigator.locks.request('taskspace-initialization', async () => {
+        const access = await loadAccess()
+        if (access.screen !== 'first-use') {
+          setScreen(access.screen)
+          setMessage(access.message ?? '')
+          return
+        }
+
+        let initializationKey: string
+        try {
+          initializationKey = localStorage.getItem(initializationKeyName) ?? crypto.randomUUID()
+          localStorage.setItem(initializationKeyName, initializationKey)
+        } catch {
+          setMessage('This browser cannot keep the temporary setup reference needed to retry safely. Enable browser storage and try again.')
+          return
+        }
+
+        const response = await fetch('/api/workspaces', {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: { 'X-Initialization-Key': initializationKey },
+        })
+
+        if (response.status === 201 || response.status === 204) {
+          const result = await loadAccess()
+          setScreen(result.screen)
+          setMessage(result.message
+            ?? (result.screen === 'first-use'
+              ? 'The setup could not be confirmed. Select Create new task space to begin again.'
+              : ''))
+          return
+        }
+
+        if (response.status === 409) {
+          clearInitializationKey()
+          setMessage('This setup could not be safely resumed. Select Create new task space to begin again.')
+          return
+        }
+
+        setMessage(response.status === 429
+          ? 'Too many setup attempts. Wait a little, then try again.'
+          : 'A new task space could not be created. Try again.')
       })
-
-      if (response.status === 201 || response.status === 204) {
-        const result = await loadAccess()
-        setScreen(result.screen)
-        setMessage(result.message
-          ?? (result.screen === 'first-use'
-            ? 'The setup could not be confirmed. Select Create new task space to begin again.'
-            : ''))
-        return
-      }
-
-      if (response.status === 409) {
-        clearInitializationKey()
-        setMessage('This setup could not be safely resumed. Select Create new task space to begin again.')
-        return
-      }
-
-      setMessage(response.status === 429
-        ? 'Too many setup attempts. Wait a little, then try again.'
-        : 'A new task space could not be created. Try again.')
     } catch {
       setMessage('The service could not be reached. You can try the same setup again.')
     } finally {

@@ -115,7 +115,6 @@ public sealed class PostgresIntegrationTests
         using var second = await harness.CreateWorkspaceAsync(client, Guid.NewGuid().ToString("D"));
         var secondCookie = CookieValue(Assert.Single(second.Headers.GetValues("Set-Cookie")));
         var secondWorkspaceId = await harness.GetWorkspaceIdForCredentialAsync(secondCookie);
-        var secondLastAccessed = await harness.GetLastAccessedAsync(secondWorkspaceId);
 
         using var firstConfirmation = await harness.ConfirmWorkspaceAsync(client, firstCookie);
         using var secondConfirmation = await harness.ConfirmWorkspaceAsync(client, secondCookie);
@@ -126,18 +125,20 @@ public sealed class PostgresIntegrationTests
         using var read = await harness.GetWorkspaceAsync(client, firstCookie);
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
 
+        var firstLastAccessed = await harness.GetLastAccessedAsync(firstWorkspaceId);
+        var secondLastAccessed = await harness.GetLastAccessedAsync(secondWorkspaceId);
         using var response = await harness.RecordActivityAsync(client, firstCookie, secondWorkspaceId);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.NotEqual(secondLastAccessed, await harness.GetLastAccessedAsync(firstWorkspaceId));
+        Assert.NotEqual(firstLastAccessed, await harness.GetLastAccessedAsync(firstWorkspaceId));
         Assert.Equal(secondLastAccessed, await harness.GetLastAccessedAsync(secondWorkspaceId));
         Assert.Equal(2, await harness.CountWorkspacesAsync());
     }
 
     [PostgresFact]
-    public async Task Duplicate_initialization_key_revokes_the_unconfirmed_workspace_without_creating_another()
+    public async Task Duplicate_initialization_key_with_single_connection_pool_revokes_the_unconfirmed_workspace()
     {
-        await using var harness = await PostgresHarness.StartAsync();
+        await using var harness = await PostgresHarness.StartAsync(maxPoolSize: 1);
         using var client = harness.CreateClient();
         var initializationKey = Guid.NewGuid().ToString("D");
 
@@ -148,7 +149,7 @@ public sealed class PostgresIntegrationTests
         Assert.Equal(HttpStatusCode.Conflict, retry.StatusCode);
         Assert.Equal("initialization_conflict", (await retry.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString());
         Assert.Equal(1, await harness.CountWorkspacesAsync());
-        Assert.Equal(0, await harness.CountActiveCredentialsAsync());
+        Assert.Equal(0, await harness.CountUnexpiredUnrevokedCredentialsAsync());
     }
 
     [PostgresFact]
@@ -167,7 +168,7 @@ public sealed class PostgresIntegrationTests
         Assert.Contains(HttpStatusCode.Created, responses.Select(response => response.StatusCode));
         Assert.Contains(HttpStatusCode.Conflict, responses.Select(response => response.StatusCode));
         Assert.Equal(1, await harness.CountWorkspacesAsync());
-        Assert.Equal(0, await harness.CountActiveCredentialsAsync());
+        Assert.Equal(0, await harness.CountUnexpiredUnrevokedCredentialsAsync());
     }
 
     [PostgresFact]
@@ -185,7 +186,7 @@ public sealed class PostgresIntegrationTests
         Assert.Equal(HttpStatusCode.NoContent, retry.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, confirmation.StatusCode);
         Assert.Equal(1, await harness.CountWorkspacesAsync());
-        Assert.Equal(1, await harness.CountActiveCredentialsAsync());
+        Assert.Equal(1, await harness.CountUnexpiredUnrevokedCredentialsAsync());
     }
 
     [PostgresFact]
@@ -207,7 +208,7 @@ public sealed class PostgresIntegrationTests
 
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Equal(HttpStatusCode.OK, subsequentAccess.StatusCode);
-        Assert.Equal(1, await harness.CountActiveCredentialsAsync());
+        Assert.Equal(1, await harness.CountUnexpiredUnrevokedCredentialsAsync());
     }
 
     [PostgresFact]
@@ -225,7 +226,7 @@ public sealed class PostgresIntegrationTests
         using var access = await harness.GetWorkspaceAsync(client, cookie);
         Assert.Equal(HttpStatusCode.Unauthorized, access.StatusCode);
         Assert.Equal(1, await harness.CountWorkspacesAsync());
-        Assert.Equal(0, await harness.CountActiveCredentialsAsync());
+        Assert.Equal(0, await harness.CountUnexpiredUnrevokedCredentialsAsync());
     }
 
     [PostgresFact]
@@ -241,7 +242,7 @@ public sealed class PostgresIntegrationTests
             harness.ConfirmWorkspaceAsync(client, cookie));
 
         Assert.All(confirmations, response => Assert.Equal(HttpStatusCode.NoContent, response.StatusCode));
-        Assert.Equal(1, await harness.CountActiveCredentialsAsync());
+        Assert.Equal(1, await harness.CountUnexpiredUnrevokedCredentialsAsync());
         foreach (var response in confirmations)
         {
             response.Dispose();
@@ -333,7 +334,10 @@ public sealed class PostgresIntegrationTests
             _factory = factory;
         }
 
-        public static async Task<PostgresHarness> StartAsync(int provisioningLimit = 50, int protectedRequestLimit = 100)
+        public static async Task<PostgresHarness> StartAsync(
+            int provisioningLimit = 50,
+            int protectedRequestLimit = 100,
+            int? maxPoolSize = null)
         {
             var administrativeConnectionString =
                 Environment.GetEnvironmentVariable("TASK_MANAGER_TEST_CONNECTION_STRING")!;
@@ -349,6 +353,11 @@ public sealed class PostgresIntegrationTests
             {
                 SearchPath = schema
             };
+            if (maxPoolSize is not null)
+            {
+                connectionStringBuilder.MaxPoolSize = maxPoolSize.Value;
+            }
+
             var connectionString = connectionStringBuilder.ConnectionString;
             var migrationPath = Path.Combine(AppContext.BaseDirectory, "Migrations", "001_create_workspace_tables.sql");
             var migration = await File.ReadAllTextAsync(migrationPath);
@@ -468,8 +477,8 @@ public sealed class PostgresIntegrationTests
         public async Task<int> CountWorkspacesAsync() =>
             await ExecuteScalarAsync<int>("SELECT count(*) FROM task_workspaces");
 
-        public async Task<int> CountActiveCredentialsAsync() =>
-            await ExecuteScalarAsync<int>("SELECT count(*) FROM workspace_credentials WHERE activated_at IS NOT NULL AND revoked_at IS NULL AND expires_at > clock_timestamp()");
+        public async Task<int> CountUnexpiredUnrevokedCredentialsAsync() =>
+            await ExecuteScalarAsync<int>("SELECT count(*) FROM workspace_credentials WHERE revoked_at IS NULL AND expires_at > clock_timestamp()");
 
         public async Task<byte[]> GetVerifierAsync() =>
             await ExecuteScalarAsync<byte[]>("SELECT verifier FROM workspace_credentials");

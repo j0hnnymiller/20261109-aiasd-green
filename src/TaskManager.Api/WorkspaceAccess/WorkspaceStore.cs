@@ -17,50 +17,54 @@ public sealed class WorkspaceStore(NpgsqlDataSource dataSource)
         var keyHash = SHA256.HashData(Encoding.UTF8.GetBytes(initializationKey));
         try
         {
-            await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-
-            try
+            await using (var connection = await dataSource.OpenConnectionAsync(cancellationToken))
             {
-                var workspaceId = Guid.NewGuid();
-                await using (var workspaceCommand = new NpgsqlCommand(
-                    """
-                    INSERT INTO task_workspaces (id, initialization_key_hash)
-                    VALUES (@id, @initialization_key_hash)
-                    """,
-                    connection,
-                    transaction))
+                await using (var transaction = await connection.BeginTransactionAsync(cancellationToken))
                 {
-                    workspaceCommand.Parameters.AddWithValue("id", workspaceId);
-                    workspaceCommand.Parameters.AddWithValue("initialization_key_hash", keyHash);
-                    await workspaceCommand.ExecuteNonQueryAsync(cancellationToken);
-                }
+                    try
+                    {
+                        var workspaceId = Guid.NewGuid();
+                        await using (var workspaceCommand = new NpgsqlCommand(
+                            """
+                            INSERT INTO task_workspaces (id, initialization_key_hash)
+                            VALUES (@id, @initialization_key_hash)
+                            """,
+                            connection,
+                            transaction))
+                        {
+                            workspaceCommand.Parameters.AddWithValue("id", workspaceId);
+                            workspaceCommand.Parameters.AddWithValue("initialization_key_hash", keyHash);
+                            await workspaceCommand.ExecuteNonQueryAsync(cancellationToken);
+                        }
 
-                await using (var credentialCommand = new NpgsqlCommand(
-                    """
-                    INSERT INTO workspace_credentials (workspace_id, verifier, expires_at)
-                    VALUES (@workspace_id, @verifier, @expires_at)
-                    """,
-                    connection,
-                    transaction))
-                {
-                    credentialCommand.Parameters.AddWithValue("workspace_id", workspaceId);
-                    credentialCommand.Parameters.AddWithValue("verifier", credential.Verifier);
-                    credentialCommand.Parameters.AddWithValue("expires_at", expiresAt);
-                    await credentialCommand.ExecuteNonQueryAsync(cancellationToken);
-                }
+                        await using (var credentialCommand = new NpgsqlCommand(
+                            """
+                            INSERT INTO workspace_credentials (workspace_id, verifier, expires_at)
+                            VALUES (@workspace_id, @verifier, @expires_at)
+                            """,
+                            connection,
+                            transaction))
+                        {
+                            credentialCommand.Parameters.AddWithValue("workspace_id", workspaceId);
+                            credentialCommand.Parameters.AddWithValue("verifier", credential.Verifier);
+                            credentialCommand.Parameters.AddWithValue("expires_at", expiresAt);
+                            await credentialCommand.ExecuteNonQueryAsync(cancellationToken);
+                        }
 
-                await transaction.CommitAsync(cancellationToken);
-                return ProvisioningResult.Created(credential.Credential, expiresAt);
+                        await transaction.CommitAsync(cancellationToken);
+                        return ProvisioningResult.Created(credential.Credential, expiresAt);
+                    }
+                    catch (PostgresException exception)
+                        when (exception.SqlState == PostgresErrorCodes.UniqueViolation
+                              && exception.ConstraintName == InitializationConstraint)
+                    {
+                        await transaction.RollbackAsync(CancellationToken.None);
+                    }
+                }
             }
-            catch (PostgresException exception)
-                when (exception.SqlState == PostgresErrorCodes.UniqueViolation
-                      && exception.ConstraintName == InitializationConstraint)
-            {
-                await transaction.RollbackAsync(CancellationToken.None);
-                await RevokeDuplicateInitializationAsync(keyHash, CancellationToken.None);
-                return ProvisioningResult.Conflict();
-            }
+
+            await RevokeDuplicateInitializationAsync(keyHash, CancellationToken.None);
+            return ProvisioningResult.Conflict();
         }
         catch (OperationCanceledException)
         {
