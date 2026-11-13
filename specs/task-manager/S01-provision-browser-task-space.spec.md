@@ -21,6 +21,10 @@ revisions:
     date: "2026-11-13"
     change: "Recorded requester approval of the S01 specification; implementation authorization and technical/security review remain separate."
     ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
+  - chat_id: "d45afcf0-3a5c-43c0-a5f9-91947ac159c3"
+    date: "2026-11-13"
+    change: "Implemented and verified S01 while preserving the independent technical/security review and pre-pilot gates."
+    ai_log: "ai-logs/2026/11/13/d45afcf0-3a5c-43c0-a5f9-91947ac159c3/conversation.md"
   - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
     date: "2026-11-13"
     change: "Recorded explicit Copilot implementation authorization through GitHub issue #2; retained independent technical/security review and pilot-readiness gates."
@@ -112,17 +116,29 @@ An individual can initialize and revisit one task space in a browser, while the 
 
 ## Verification
 
-No application or test project exists, so there is no repository-supported test command or working directory yet. The checks below are planned; test names are provisional, and commands must be added after Phase 0 selects the project/tooling. Cross-workspace and persistence checks require a real, isolated PostgreSQL test database.
+The application and test projects were scaffolded for the approved stack. Cross-workspace and persistence checks use a real, isolated PostgreSQL database; mocks are not substituted.
 
 | Criterion | Planned test/check | Command and working directory | Expected result |
 |-----------|--------------------|-------------------------------|-----------------|
-| AC-001 | Proposed browser acceptance check: explicit first-use action follows disclosure | Not available; no browser application or test runner exists | No-recovery disclosure and create action appear; no workspace is created until selection |
-| AC-002 | Proposed provisioning API and PostgreSQL integration tests | Not available; no solution, project, or test runner exists | One committed workspace/verifier pair; raw credential absent from storage; cookie and server verifier expire after 30 days |
-| AC-003 | Proposed credential-validation and cross-workspace PostgreSQL integration tests | Not available; no solution, project, or test runner exists | Valid credential reaches only its associated workspace; cross-workspace reads and writes are denied |
-| AC-004 | Proposed API tests for missing, invalid, expired, and revoked credentials and safe errors | Not available; no solution, project, or test runner exists | No protected data or workspace-existence disclosure; no implicit replacement workspace; credentials are rejected at/after expiry |
-| AC-005 | Proposed PostgreSQL-backed concurrent initialization and ambiguous-retry integration tests | Not available; no solution, project, or test runner exists | Server-side correlation prevents unintended duplicate/orphan workspace state without acting as authorization |
-| AC-006 | Proposed security tests plus review of cookie, request, persistence, logging, origin/CSRF, and abuse-control behavior | Not available; no security/test tooling exists | No credential leakage; reviewed request protections and configurable controls produce safe outcomes; numeric limits are approved before pilot |
-| AC-007 | Proposed keyboard/browser acceptance check | Not available; no browser application or test runner exists | First-use and error workflows are keyboard operable with visible focus and accessible feedback |
+| AC-001 | `PostgresIntegrationTests.First_visit_requires_explicit_creation_and_issues_only_a_protected_cookie`; browser first-use test | `TASK_MANAGER_TEST_CONNECTION_STRING='Host=127.0.0.1;Port=54329;Database=task_manager_test;Username=postgres' dotnet test tests/TaskManager.Api.Tests/TaskManager.Api.Tests.csproj`; `npm run test:e2e --prefix src/client` (repository root) | Passed: initial protected read creates nothing; browser sends no provisioning request before explicit selection |
+| AC-002 | PostgreSQL API test above verifies one workspace/verifier pair and 30-day server expiry; cookie assertions check Secure, HttpOnly, Path, no Domain, and SameSite; browser confirms receipt before displaying ready; independent review remains open | Same commands as AC-001 | Passed for persistence, expiry, and attributes; SameSite `Strict` is selected but technical/security approval is pending |
+| AC-003 | `PostgresIntegrationTests.Protected_write_uses_credential_workspace_and_ignores_client_workspace_ids`; code review of the credential-derived read boundary | PostgreSQL `dotnet test` command above (repository root) | Passed: real-PostgreSQL write with workspace B in query/body changes only workspace A derived from its credential; S01 contains no task/list data API |
+| AC-004 | `PostgresIntegrationTests.Missing_invalid_expired_and_revoked_credentials_never_provision_replacements` | PostgreSQL `dotnet test` command above (repository root) | Passed: missing, malformed, expired, and revoked credentials receive 401; no replacement workspace is created |
+| AC-005 | `PostgresIntegrationTests.Duplicate_initialization_key_revokes_the_unconfirmed_workspace_without_creating_another`, `Concurrent_initialization_requests_do_not_leave_duplicate_active_workspaces`, `Repeated_initialization_with_the_issued_cookie_is_idempotent`, `Duplicate_initialization_without_a_cookie_does_not_revoke_an_activated_credential`, `Cancelled_duplicate_initialization_cleans_up_the_unconfirmed_attempt`, and `Concurrent_confirmation_requests_are_idempotent` | PostgreSQL `dotnet test` command above (repository root) | Passed: concurrent and ambiguous unauthenticated retries create no duplicate active workspace; valid-cookie retry and confirmation are idempotent, cancellation compensation completes, and duplicate requests cannot revoke a confirmed credential |
+| AC-006 | PostgreSQL tests for Origin rejection and configurable provisioning/protected-request 429 outcomes; browser test verifies empty initialization body and JavaScript cannot read the credential; source review of URL/storage/logging surfaces | PostgreSQL `dotnet test` and `npm run test:e2e --prefix src/client` (repository root) | Passed for automated checks. Independent review of SameSite/Origin/CSRF and duplicate-attempt compensation remains required; numeric pilot limits remain unapproved |
+| AC-007 | Playwright keyboard/focus/progress test and unavailable-service feedback test | `npm run test:e2e --prefix src/client` (repository root; Chromium installed) | Passed: create flow is keyboard-operable, focus is visible, and status/error feedback is announced |
+
+### Execution evidence
+
+Prerequisites: .NET 10 SDK, Node 22/npm, Docker, Chromium (`npx playwright install chromium`), and a disposable PostgreSQL 16 database. The test database was loopback-bound and used only for this verification.
+
+- `dotnet test tests/TaskManager.Api.Tests/TaskManager.Api.Tests.csproj` with `TASK_MANAGER_TEST_CONNECTION_STRING=Host=127.0.0.1;Port=54329;Database=task_manager_test;Username=postgres` - passed 14 tests, 0 skipped, against PostgreSQL.
+- `npm run lint --prefix src/client` - passed.
+- `npm run build --prefix src/client` - passed.
+- `npm run test:e2e --prefix src/client` with the same test connection string and the migration applied to the disposable database - passed 4 Chromium tests.
+- Applied `001_create_workspace_tables.sql` twice to a disposable schema with `psql -v ON_ERROR_STOP=1` - both runs completed successfully.
+
+The exact setup commands and implementation choices are also documented in the root [README](../../README.md). These automated results do not complete the required independent technical/security review. Numeric abuse limits and inaccessible-workspace purge owner/timing remain pre-pilot gates.
 
 ## Showcase and completion
 
