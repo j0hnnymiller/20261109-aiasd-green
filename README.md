@@ -31,6 +31,14 @@ revisions:
     date: "2026-11-13"
     change: "Linked the vertical-slice implementation roadmap as a draft plan; it does not authorize implementation."
     ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
+  - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
+    date: "2026-11-13"
+    change: "Updated the S01 specification link to Ready for review and clarified that technical/security review and implementation authorization remain pending."
+    ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
+  - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
+    date: "2026-11-13"
+    change: "Updated the S01 specification link to Approved by the requester; implementation authorization remains separate."
+    ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
 ---
 
 # Task Manager
@@ -42,4 +50,4 @@ Welcome!
 - [Task Manager Product Requirements Specification](task-manager-requirements.md) (approved baseline, v0.8)
 - [Task Manager Architecture](task-manager-architecture.md) (approved by requester; implementation authorization is separate)
 - [Task Manager Vertical-Slice Implementation Roadmap](task-manager-implementation-roadmap.md) (draft plan; implementation authorization is separate)
-- [S01: Provision and Access a Browser Task Space](specs/task-manager/S01-provision-browser-task-space.spec.md) (blocked draft; Phase 0 decisions and implementation authorization remain separate)
+- [S01: Provision and Access a Browser Task Space](specs/task-manager/S01-provision-browser-task-space.spec.md) (approved by requester; technical/security review and implementation authorization remain separate)

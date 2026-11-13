@@ -12,6 +12,11 @@ task_durations:
 total_duration: "00:05:04"
 ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
 source: "User request; approved task-manager PRS v0.8 and architecture specification"
+revisions:
+  - chat_id: "99477caf-5fba-46a3-a2f8-4813bccd3c7c"
+    date: "2026-11-13"
+    change: "Clarified S01 and pilot-readiness dependencies from the requester's first-use and 30-day credential choices; moved purge and numeric abuse limits to pre-pilot gates and reconciled the architecture baseline."
+    ai_log: "ai-logs/2026/11/13/99477caf-5fba-46a3-a2f8-4813bccd3c7c/conversation.md"
 ---
 
 # Task Manager Vertical-Slice Implementation Roadmap
@@ -22,7 +27,7 @@ source: "User request; approved task-manager PRS v0.8 and architecture specifica
 
 **Product baseline:** [Task Manager PRS v0.8](task-manager-requirements.md), approved by the requester on 2026-11-13.
 
-**Architecture baseline:** [Task Manager Architecture](task-manager-architecture.md), approved by the requester on 2026-11-13. Its document-control section still cites PRS v0.7; reconcile that reference to v0.8 before implementation planning is baselined. This is a document-reference mismatch, not a known behavior conflict in the selected access, list, or retention decisions.
+**Architecture baseline:** [Task Manager Architecture](task-manager-architecture.md), approved by the requester on 2026-11-13 and aligned to PRS v0.8.
 
 The plan covers the approved individual, account-free, browser task manager: workspace access, task CRUD and status, lists, priority, due dates/overdue behavior, search, filters, and deletion. Team sharing, cross-device pairing, recovery, offline writes, native clients, recurring tasks, reminders, tags, priority sorting, and import/export are outside this baseline.
 
@@ -36,7 +41,7 @@ The plan covers the approved individual, account-free, browser task manager: wor
 | [Implementation guidance](.github/instructions/vertical-slice-implementation.instructions.md)     | Feature-centric boundaries, thin shared kernel, and slice-level verification.                                                                                                                     |
 
 - The selected technologies are React/TypeScript, C# with ASP.NET Core, and PostgreSQL. Exact versions, API style, data-access and migration libraries, test libraries, and hosting provider are not selected.
-- The architecture specifies account-free, single-browser access without pairing or recovery. Credential lifetime/revocation and purge timing for inaccessible workspaces remain pre-pilot decisions.
+- The architecture specifies account-free, single-browser access without pairing or recovery. The requester selected a persistent Secure, HttpOnly credential cookie with a 30-day absolute expiry; technical/security validation remains required. Inaccessible-workspace purge ownership/timing and numeric rate limits remain pre-pilot gates.
 - The approved due-date rule uses the user's current local date. Confirm whether that means the browser's current time zone before implementing overdue calculations.
 - No schedule, estimates, team allocation, workload, budget, or hosting provider was supplied. The sequence below is dependency-based, not a duration or staffing commitment.
 - The requester approved the PRS and architecture, but implementation authorization must be recorded separately before code work begins.
@@ -45,7 +50,7 @@ The plan covers the approved individual, account-free, browser task manager: wor
 
 | Phase                              | Objective                                                                                   | Included work                                                                                                                                                                                                                                                                                     | Exit gate                                                                                                                                                            |
 | ---------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Authorization and readiness     | Make the first slice implementable without guessing unresolved policy.                      | Record implementation authorization; reconcile the architecture's PRS v0.7 reference; select compatible tool/library versions and API/data/migration/test approaches; decide credential lifetime/revocation, inaccessible-workspace purge ownership/timing, and overdue time-zone interpretation. | Decisions and implementation authorization are recorded. Items deferred to pilot/general launch have an owner and due gate; no code work is inferred from this plan. |
+| 0. Authorization and readiness     | Make implementation decisions explicit and distinguish S01 prerequisites from later gates. | Record separate implementation authorization; select compatible tool/library versions and API/data/migration/test approaches; obtain technical/security review of the selected credential lifecycle, first-use, cookie, origin/CSRF, and initialization-retry behavior. Assign owners and due gates for inaccessible-workspace purge and numeric abuse limits before pilot; resolve overdue time-zone interpretation before S06. | S01 decisions have technical/security review and implementation authorization is recorded before code work. Pilot and S06 gates have owners and due gates; this plan itself does not authorize implementation. |
 | 1. Workspace foundation            | Give one browser a secure, isolated task space.                                             | S01                                                                                                                                                                                                                                                                                               | Workspace provisioning, credential handling, and cross-workspace isolation tests pass.                                                                               |
 | 2. Core task lifecycle             | Deliver durable task capture and change.                                                    | S02-S03                                                                                                                                                                                                                                                                                           | Create/view/edit/complete flows pass API, PostgreSQL integration, and browser acceptance tests, including failure and stale-write cases.                             |
 | 3. Organize and find work          | Deliver the selected task organization and discovery behaviors.                             | S04-S07                                                                                                                                                                                                                                                                                           | List, priority, overdue, filters, and search acceptance criteria pass; keyboard behavior is covered in each workflow.                                                |
@@ -102,7 +107,7 @@ Solid arrows are blocking prerequisites; dotted arrows are coordination or condi
 - A valid credential reaches only its associated workspace. Missing, invalid, expired, or revoked credentials do not expose workspace data.
 - Concurrent first-use requests do not create an unintended set of duplicate active task spaces for one browser initialization flow.
 - Integration/security tests attempt cross-workspace reads and writes and verify they are denied.
-- Rate limits and credential expiry/revocation tests use values and behavior approved in Phase 0; no numeric limits are invented here.
+- Credential expiry/revocation tests verify the selected 30-day policy and reviewed operations procedure. Abuse controls are configurable and return safe outcomes; numeric rate limits are approved before pilot.
 
 **Dependencies:** Phase 0 access/security decisions. All task and list slices depend on S01.
 
@@ -230,7 +235,7 @@ Solid arrows are blocking prerequisites; dotted arrows are coordination or condi
 - Backups retain deleted task data for no more than 30 days.
 - Before restored data serves traffic, apply the independent deletion ledger so ledgered tasks are not reintroduced; retain ledger entries until all backups containing those records expire.
 - Restore tests demonstrate that deleting a task, restoring an older backup, and reapplying the ledger does not resurrect the task.
-- Define and test purge timing for inaccessible workspaces in Phase 0/Phase 5; do not infer it from the 30-day deleted-task backup cap.
+- Define and test inaccessible-workspace purge ownership and timing as a G02 pilot-readiness gate; do not treat it as an S08 prerequisite or infer it from the 30-day deleted-task backup cap.
 
 **Dependencies:** S01-S03; include S04-created list references in deletion behavior if a task is assigned to a list. Backup/restore and purge procedures must be selected and testable before pilot.
 
@@ -275,13 +280,11 @@ After the pilot, establish first-task activation baseline and approve a numeric 
 
 | Risk                                                                              | Mitigation / gate                                                                                                                                       |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Architecture document references PRS v0.7 while current product baseline is v0.8. | Reconcile the architecture's source-baseline reference before implementation planning is baselined; preserve any distinct approved technical decisions. |
-| Lost browser credential means no pairing or recovery path.                        | Disclose this before first-use provisioning; approve credential expiry/revocation, rate limits, and inaccessible-workspace purge before pilot.          |
+| Lost or expired browser credential means no pairing or recovery path.             | Disclose this before first-use provisioning; technically validate the selected 30-day expiry/revocation policy; approve rate limits and inaccessible-workspace purge before pilot. |
 | Workspace isolation failure could expose another anonymous user's tasks.          | Enforce server-derived scope and same-workspace constraints; test adversarial cross-workspace requests at each feature boundary.                        |
 | A database restore could resurrect deleted tasks.                                 | Apply and test the independent deletion ledger before restored data serves traffic; enforce the 30-day maximum backup retention.                        |
 | Overdue status changes if the interpretation of local date changes.               | Resolve the browser-local time-zone interpretation before S06 implementation and test date boundaries.                                                  |
 | Operational thresholds, hosting, support, and workload are unknown.               | Do not invent capacity claims; select hosting and owner responsibilities and approve measured pilot/general-launch objectives at G02/G03.               |
-| Architecture and PRS source version have drifted.                                 | Reconcile versions and keep a single declared product baseline before implementation authorization.                                                     |
 
 ## Plan Exit Criteria
 
