@@ -6,7 +6,7 @@ chat_id: "c4961cf2-7fc3-457c-85c0-292912b61606"
 prompt: |
   create a product requirements specification a task manager
 started: "2026-11-13T08:12:22.1498043-08:00"
-ended: "2026-11-13T08:35:40.5957817-08:00"
+ended: "2026-11-13T08:46:25.2782780-08:00"
 task_durations:
   - task: "Repository and product-context review"
     duration: "00:00:35"
@@ -22,7 +22,15 @@ task_durations:
     duration: "00:01:30"
   - task: "Chat record and journal updates"
     duration: "00:01:39"
-total_duration: "00:10:41"
+  - task: "Requirements traceability update"
+    duration: "00:02:00"
+  - task: "Validation and records"
+    duration: "00:01:00"
+  - task: "Open-question recommendation update"
+    duration: "00:02:00"
+  - task: "Validation and documentation"
+    duration: "00:02:21"
+total_duration: "00:18:02"
 ai_log: "ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md"
 source: "user request"
 ---
@@ -33,7 +41,7 @@ source: "user request"
 - Date: 2026-11-13
 - Operator: johnmillerATcodemag-com
 - Model: unknown/unknown@unknown
-- Duration: 00:10:41
+- Duration: 00:18:02
 
 ## Objective
 
@@ -42,6 +50,8 @@ Create a reviewable product requirements specification for a task manager withou
 ## Completed
 
 - `task-manager-requirements.md` - Draft PRS with proposed MVP scope, testable acceptance criteria, candidate measures, assumptions, risks, and proposed answers to all six open-question topics, pending approval.
+- `task-manager-requirements.md` v0.3 - Added source-traceable candidate business rules and event outcomes, evidence classification, and open questions for search, due dates, deletion, and save conflicts.
+- `task-manager-requirements.md` v0.4 - Added proposed defaults for remaining open questions and marked unresolved targets/ownership with `[NEEDS DECISION]`.
 - `README.md` - Link to the draft PRS.
 - `ai-logs/2026/11/13/c4961cf2-7fc3-457c-85c0-292912b61606/conversation.md` - Chat provenance log.
 - Chat response - Source-cited candidate business rules, actors, event flows, facts, interpretations, exceptions, open questions, and contradictions for stakeholder review.
@@ -52,7 +62,9 @@ Create a reviewable product requirements specification for a task manager withou
 - Treated the technologies named in repository instructions as technical constraints, not product decisions.
 - Recommended a single-user account-free MVP, limited task fields, browser and accessibility targets, pilot-based success measures, deferring migration, and role-based decision ownership. These are recommendations, not approved decisions.
 - Treated the current PRS acceptance criteria as candidate rules, not approved policy; flagged the status table's version 0.1 versus change history through 0.2.
+- Preserved candidate status for derived business rules and corrected the document-control version to match its change history.
+- Kept new search, due-date, deletion, save-failure, and conflict-handling defaults as recommendations pending stakeholder approval.
 
 ## Next steps
 
-- Product owner to review the proposed answers, confirm target users and MVP scope, approve success targets and ownership, and resolve operational release gates before baselining the PRS.
+- Product/domain owners to validate candidate rules, confirm the proposed answers, set success targets and ownership, and resolve operational release gates before baselining the PRS.
